@@ -14,7 +14,6 @@ x = input(askKorea);
 
 exchange(x);
 
-
 function money=exchange(x)
     exchangeRate=[0.00081, 1328.88 , 9.72,192.91];
     exchangeCountry=["미국","유럽","일본","중국"];
