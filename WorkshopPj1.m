@@ -1,7 +1,7 @@
 askKorea="한국 원화 단위 얼마 있으신가요?";
 x = input(askKorea);
 
-while 1
+while 1%fgfgfgfg
     askCountry="환전하려는 국가는 어디신가요? (1=미국, 2=유럽, 3=일본 4=중국)";
     y= input(askCountry);
     if (y>=1 && y<=4 && (y-int8(y)==0))
