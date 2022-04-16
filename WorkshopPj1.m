@@ -13,7 +13,7 @@ x = input(askKorea);
 % 1미국 0.00081  2유럽 1328.88 3일본 9.72 4중국 192.91
 %sfsgdfgsdf
 exchange(x);%hong%04162031
-
+%dfasdfasdfasdfasdfasdfasdfasdfasdf
 
 function money=exchange(x)
     exchangeRate=[0.00081, 1328.88 , 9.72,192.91];
