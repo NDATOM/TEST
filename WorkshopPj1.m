@@ -11,7 +11,7 @@ x = input(askKorea);
 % end
 
 % 1미국 0.00081  2유럽 1328.88 3일본 9.72 4중국 192.91
-
+%sfsgdfgsdf
 exchange(x);%hong%04162031
 
 
