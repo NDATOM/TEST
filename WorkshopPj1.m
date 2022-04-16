@@ -11,9 +11,8 @@ x = input(askKorea);
 % end
 
 % 1미국 0.00081  2유럽 1328.88 3일본 9.72 4중국 192.91
-%sfsgdfgsdf
-exchange(x);%hong%04162031
-%dfasdfasdfasdfasdfasdfasdfasdfasdf
+
+exchange(x);
 
 function money=exchange(x)
     exchangeRate=[0.00081, 1328.88 , 9.72,192.91];
@@ -22,10 +21,68 @@ function money=exchange(x)
     for i = 1:1:4
           money=x*exchangeRate(i);
           disp(exchangeCountry(i)+" 총 : "+money+exchangeName(i)+" 입니다");
-%           moneyPaper(i, money)
+          moneyPaper(i, money)
     end
 end
 
 function moneyReturn=moneyPaper(countryNum,moneyTotal)
-    
+ switch countryNum
+    case '1'
+       sum = 0;
+       sum = sum + fix(moneyTotal/100);
+       r = rem(moneyTotal,100);
+       sum = sum + fix(r/50);
+       r = rem(r,50);
+       sum = sum + fix(r/20);
+       r = rem(r,20);
+       sum = sum + fix(r/10);
+       r = rem(r,10);
+       sum = sum + fix(r/5);
+       r = rem(r,5);
+       sum = sum + fix(r/2);
+       r = rem(r,2);
+       sum = sum + fix(r/1);
+       disp(" 총 : "+sum+"의 화폐가 필요합니다");
+    case '2'
+         sum = 0;
+       sum = sum + fix(moneyTotal/500);
+       r = rem(moneyTotal,500);
+       sum = sum + fix(r/200);
+       r = rem(r,200);
+       sum = sum + fix(r/100);
+       r = rem(r,100);
+       sum = sum + fix(r/50);
+       r = rem(r,50);
+       sum = sum + fix(r/20);
+       r = rem(r,20);
+       sum = sum + fix(r/10);
+       r = rem(r,10);
+       sum = sum + fix(r/5);
+       disp(" 총 : "+sum+"의 화폐가 필요합니다");
+    case '3'
+         sum = 0;
+       sum = sum + fix(moneyTotal/10000);
+       r = rem(moneyTotal,10000);
+       sum = sum + fix(r/5000);
+       r = rem(r,5000);
+       sum = sum + fix(r/2000);
+       r = rem(r,2000);
+       sum = sum + fix(r/1000);
+       disp(" 총 : "+sum+"의 화폐가 필요합니다");
+    case '4'
+         sum = 0;
+       sum = sum + fix(moneyTotal/100);
+       r = rem(moneyTotal,100);
+       sum = sum + fix(r/50);
+       r = rem(r,50);
+       sum = sum + fix(r/20);
+       r = rem(r,20);
+       sum = sum + fix(r/10);
+       r = rem(r,10);
+       sum = sum + fix(r/5);
+       r = rem(r,5);
+       sum = sum + fix(r/1);
+       disp(" 총 : "+sum+"의 화폐가 필요합니다");
+ end
+
 end
