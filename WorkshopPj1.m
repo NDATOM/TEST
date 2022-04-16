@@ -28,5 +28,5 @@ function money=exchange(x,y)
         case 4
             money=x*192.91;
             disp("총"+money+"위안 입니다");
-    end
+    end%ghjgk
 end
