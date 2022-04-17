@@ -2,7 +2,7 @@ askKorea="한국 원화 단위 얼마 있으신가요?";
 x = input(askKorea);
 country=struct;
 country.name=["미국","유럽","일본","중국"];
-country.exchangeRate=[0.00081, 1328.88 , 9.72,192.91];
+country.exchangeRate=[0.00081, 0.00075 , 0.1,0.0052];
 country.moneyName=[" 달러"," 유로"," 엔"," 위안"];
 
 exchange(x,country);
