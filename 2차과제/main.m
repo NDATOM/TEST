@@ -1,2 +1,14 @@
-
-%dddafa
+droneobj = ryze();
+takeoff(droneobj);
+pause(1);
+moveleft(droneobj, 'Distance', 1, 'Speed', 0.8);
+pause(1);
+turn(droneobj, deg2rad(45));
+pause(1);
+moveforward(droneobj, 'Distance', 1*sqrt(2),'Speed',0.8);
+pause(1);
+turn(droneobj, deg2rad(135));
+pause(1);
+moveforward(droneobj, 'Distance', 1, 'Speed', 0.8);
+pause(1);
+land(droneobj);
