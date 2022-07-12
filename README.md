@@ -21,11 +21,11 @@
 <br>
      
 ### 1단계 전략 
-드론을 띄우고, 전진하면서 표식을 체크한다. 그리고 90도 회전한다.
+드론을 띄우고, 전진하면서 표식을 찾는다. 그리고 90도 회전한다.
 ### 2단계 전략
-전진 후 파란 링의 중심을 찾고, 다시 전진하면서 표식을 체크한다. 그리고 90도 회전한다.
+전진 후 파란 링의 중심을 찾고, 다시 전진하면서 표식을 찾는다. 그리고 90도 회전한다.
 ### 3단계 전략
-전진 후 45도 회전, 중심을 찾고 각도 조절 후 다시 중심을 찾는다. 그리고 전진 후 표식을 체크하고 착지한다.
+전진 후 45도 회전, 중심을 찾고 각도 조절 후 다시 중심을 찾는다. 그리고 전진 후 표식을 찾고 착지한다.
      
 <br>
      
@@ -37,7 +37,7 @@
 # 알고리즘 설명 및 소스코드 설명
 
 # 1단계 알고리즘 및 소스코드 설명
-
+드론 이륙 후,
 ```matlab
          image=snapshot(cameraObj);
 %     imshow(image);
@@ -46,7 +46,7 @@
 %     image1S = imageHSV(:,:,2);
 %     image1V = imageHSV(:,:,3);
 % 
-%     imageR_H = image1H <= 0.01 | image1H >= 0.97;
+     imageR_H = image1H <= 0.01 | image1H >= 0.97;
 %     imageR_S = image1S >= 0.95 & image1S <= 1.0;
 %     imageR_V = image1V >= 0.38 & image1V <= 0.41;
 %     imageR_combi = imageR_H & imageR_S & imageR_V;
@@ -118,10 +118,14 @@ end
 드론이 보는 표식의 크기에 따라 가까운지 먼지 판단하고, moveforward로 지정된 시간 동안 지정된 추가 옵션에 따라 직진하게 한다.
 
 # 2단계 알고리즘 및 소스코드 설명
-4가지 경우를 반복한다. 
+5가지 경우를 반복한다. 
 
-##### 첫 번째: 화면에 링의 파란 부분이 꽉 찼을 때 중앙점을 찾고 통과
-원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
+### 첫 번째: 화면에 링의 파란 부분이 꽉 찼을 때 중앙점을 찾고 통과
+- 원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
+
+<br>
+
+링을 검출하는 알고리즘은 다음과 같다.
 
 ```matlab
     image=snapshot(cameraObj);
@@ -160,6 +164,10 @@ regionprops 함수로 속성 세트를 측정한다.<br>
 rectangle 함수로 사각형을 그린다.<br>
 BOX 안을 모두 흰색(1)으로 만든다.<br>
 
+
+<br>
+중심을 찾는 알고리즘은 다음과 같다.
+
 ```matlab
             image=snapshot(cameraObj);
             image1R = image(:,:,1);
@@ -178,12 +186,14 @@ BOX 안을 모두 흰색(1)으로 만든다.<br>
             cf=mean(col);
             viscircles([cf rf],3);
 ```
-드론 이미지에서, 파란색 성분만을 검출
-반전시킨 뒤, imerode 함수로 원의 노이즈를 제거
+드론 이미지에서, 파란색 성분만을 검출<br>
+반전시킨 뒤, imerode 함수로 원의 노이즈를 제거 <br>
 mean 함수로 중심값을 찾는다.
 
+<br>
+중심으로 이동하는 알고리즘은 다음과 같다.
 
-     ```matlab
+```matlab
      error_r=rf-360;
             error_c=cf-480;
             
@@ -229,39 +239,78 @@ mean 함수로 중심값을 찾는다.
                     moveleft(droneobj,'WaitUntilDone',true,'Distance',0.2);
                 end
             end
-     ```
-     찾은 중심값과 드론 전체화면의 중심과 비교하여 이동
-     이때, 드론의 최소 이동거리 20cm 문제로 중심점을 정확하게 맞추는 것이 어려우므로 margin값  
-     
-     
-     ```matlab
-     if (length(row) < 50 || length(col) < 50)
-     ```
-     중심을 찾았다면, 전진 후 빨간색 표식의 크기로 종료 지점을 확인
-     
-     
-##### 두 번째: 화면에 링의 파란 부분이 꽉 차지 않았을 때 중앙점을 찾고 통과
-원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
-
-첫 번째 경우와 다른 점은 전진반복문이 있다는 것
-     
-     
-##### 세 번째: 화면에 링의 파란 부분이 꽉 찼을 때 통과
- ```matlab
-     elseif   (length(row) > 640000 && length(col) > 640000)
 ```
-     꽉 찼을 때, 중심과 비교하여 상하좌우를 맞추는 알고리즘
-     
-     
-##### 네 번째: 화면에 링의 파란 부분이 꽉 차지 않았을 때 통과
-전체화면의 중심과 원의 중심과의 차이에 따라 원의 중심으로 이동
+찾은 중심값과 드론 전체화면의 중심과 비교하여 이동 <br>
+이때, 드론의 최소 이동거리 20cm 문제로 중심점을 정확하게 맞추는 것이 어려우므로 margin값  
 
-     
 
-##### 다섯 번째: 예외 상황
+```matlab
+     if (length(row) < 50 || length(col) < 50)
+```
+중심을 찾았다면, 전진 후 빨간색 표식의 크기로 종료 지점을 확인
+     
+     
+### 두 번째: 화면에 링의 파란 부분이 꽉 차지 않았을 때 중앙점을 찾고 통과
+- 원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
+
+첫 번째 경우와 다른 부분은 전진하는 코드가 있다는 것이다.
+     
+### 세 번째: 화면에 링의 파란 부분이 꽉 찼을 때 통과
+
+이때, 안정적으로 중심을 찾기 위한 알고리즘을 만들었다.
+
+```matlab
+ if abs(error_r)>margin2_full_ud  %위아래 판단, 에러가 특정 margin 밖에 있고, Col을 맞출 때
+            if error_r>0
+                disp('down full');
+               movedown(droneobj,'WaitUntilDone',true);
+            else
+                disp('up full');
+              moveup(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop up down full');
+            UDIn_full=UDIn_full+1;
+        end
+%%
+        if abs(error_c)>margin2_full  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때
+            if error_c>0
+                disp('right full');
+                moveright(droneobj,'WaitUntilDone',true);
+            else
+                disp('left full');
+                moveleft(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop right left full');
+            RLIn_full=RLIn_full+1;
+        end
+% 양옆 혹은 위아래 하나만 중심을 찾았을 때
+        if RLIn_full~=UDIn_full
+            center_reset=1;
+        end
+        
+        if center_reset==1
+            UDIn_full=0;
+            RLIn_full=0;
+            center_reset=0;
+        end
+        
+        if RLIn_full > 2 && UDIn_full > 2 
+            fullgo=1;
+            disp('fullgo=1');
+        end
+```
+     
+     
+### 네 번째: 화면에 링의 파란 부분이 꽉 차지 않았을 때 통과
+
+
+
+### 다섯 번째: 예외 상황
 파랑색이 존재하지 않는다면 상승
      
-     
+
      
 ## 3단계
 * 90도 회전, 전진, 45도 회전한다.<br>
