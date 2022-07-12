@@ -19,18 +19,109 @@
 > 총 시간: 5분
     
 <br>
+     
+### 1단계 전략 
+드론을 띄우고, 전진하면서 표식을 체크한다. 그리고 90도 회전한다.
+### 2단계 전략
+전진 후 파란 링의 중심을 찾고, 다시 전진하면서 표식을 체크한다. 그리고 90도 회전한다.
+### 3단계 전략
+전진 후 45도 회전, 중심을 찾고 각도 조절 후 다시 중심을 찾는다. 그리고 전진 후 표식을 체크하고 착지한다.
+     
 <br>
-<br>
-
+     
 **대회 맵 구성과 비슷한 환경을 만들어 연습**<br>
 ![KakaoTalk_20220711_113637715](https://user-images.githubusercontent.com/103032180/178187069-9ce6c275-917b-4d44-9b45-9b5c5327a93e.jpg)
 
 
 
 # 알고리즘 설명 및 소스코드 설명
-~하강반복문 알고리즘, 직진반복문 알고리즘~
 
-# n. BoundingBox 알고리즘, 중심 찾기 알고리즘
+# 1단계 알고리즘 및 소스코드 설명
+
+```matlab
+         image=snapshot(cameraObj);
+%     imshow(image);
+%     imageHSV=rgb2hsv(image);
+%     image1H = imageHSV(:,:,1);
+%     image1S = imageHSV(:,:,2);
+%     image1V = imageHSV(:,:,3);
+% 
+%     imageR_H = image1H <= 0.01 | image1H >= 0.97;
+%     imageR_S = image1S >= 0.95 & image1S <= 1.0;
+%     imageR_V = image1V >= 0.38 & image1V <= 0.41;
+%     imageR_combi = imageR_H & imageR_S & imageR_V;
+
+    image1R = image(:,:,1);
+    image1G = image(:,:,2);
+    image1B = image(:,:,3);
+
+    image_only_R=image1R-image1G/2-image1B/2;
+    bw = image_only_R > 55;
+    
+    image_only_B=image1B-image1R/2-image1G/2;
+    bw2 = image_only_B > 55;
+    [row2, col2] = find(bw2);
+
+    imshow(bw2);
+    stats = regionprops(bw);
+    centerIdx=1;
+    redOn=0;
+    red_close=0;
+    disp('length(row2) = ');
+    disp(length(row2));
+     
+```
+빨간색의 h, s, v 값, regionprops로 빨간색 표식의 속성을 찾는다.
+     
+```matlab
+     
+    if(~isempty(stats))
+        for i = 1:numel(stats)
+        
+            if stats(i).Area > 3000
+                disp("stage = 2");
+                pause(1);
+                stage1image=bw;
+                turn(droneobj, deg2rad(90));
+                pause(0.5);
+                moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+%                 moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
+                stage = 2;
+                break;
+            end
+
+            if stats(i).Area > 1000
+                red_close=1;
+            end
+        end
+        if red_close==1
+            moveforward(droneobj,'WaitUntilDone',true,'distance',0.3);
+            disp("moveforward 0.4 slow");
+        else
+            moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+            disp("moveforward 0.4 fast");
+        end
+
+        redOn=1;
+    end
+
+    if red_close==1 && stage==1
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.2);
+        disp("moveforward 0.4 slow not box");
+    elseif redOn==0 && stage==1
+        moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
+        disp("moveforward 1");
+    end
+
+end
+```
+드론이 보는 표식의 크기에 따라 가까운지 먼지 판단하고, moveforward로 지정된 시간 동안 지정된 추가 옵션에 따라 직진하게 한다.
+
+# 2단계 알고리즘 및 소스코드 설명
+4가지 경우를 반복한다. 
+
+##### 첫 번째: 화면에 링의 파란 부분이 꽉 찼을 때 중앙점을 찾고 통과
+원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
 
 ```matlab
     image=snapshot(cameraObj);
@@ -69,7 +160,6 @@ regionprops 함수로 속성 세트를 측정한다.<br>
 rectangle 함수로 사각형을 그린다.<br>
 BOX 안을 모두 흰색(1)으로 만든다.<br>
 
-맞나??
 ```matlab
             image=snapshot(cameraObj);
             image1R = image(:,:,1);
@@ -89,50 +179,164 @@ BOX 안을 모두 흰색(1)으로 만든다.<br>
             viscircles([cf rf],3);
 ```
 드론 이미지에서, 파란색 성분만을 검출
-반전시킨 뒤, imerode 함수로 침식시킨다.
+반전시킨 뒤, imerode 함수로 원의 노이즈를 제거
 mean 함수로 중심값을 찾는다.
 
 
-# n. 하강반복문 알고리즘???
+     ```matlab
+     error_r=rf-360;
+            error_c=cf-480;
+            
+            down1=bw;
+            
+            disp(error_r);
 
+            
+            if abs(error_r)<100 || downCount==2 % 1m 에서 -30
+                disp('if abs(error_r)<100');
+                break;
+            end
+            downCount=downCount+1;
+            movedown(droneobj,'WaitUntilDone',true);
+        end
+        goCount=0;
+        while 1
+            goCount=goCount+1;
+            if goCount<2 % 한번 하강
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
+            else
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',0.8);
+            end
 
-
-# n. 전체 단계 통과 알고리즘
-
-## 1단계
-빨간색의 h, s, v 값, regionprops로 빨간색 표식의 속성을 찾는다.
-드론이 보는 표식의 크기가 5500이상, 즉 가까운 경우에는 moveforward로 직진하도록 하고
-먼 경우에는 더 많이 직진하도록 한다.
-
-
-## 2단계
-4가지 경우를 반복한다. 
-
-##### 첫 번째: 화면에 링의 파란 부분이 꽉 찼을 때 중앙점을 찾고 통과
-원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
-
+             bw=~bw_origin; % 원형만 남게 
+        
+            bw = imerode(bw,se);
+    
+            [row, col] = find(bw);
+        
+            rf=mean(row);
+            cf=mean(col);
+            viscircles([cf rf],3);
+   
+            error_c=cf-480; 
+             
+            if abs(error_c)>margin2_full+10 %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
+                if error_c>0
+                    disp('right go');
+                    moveright(droneobj,'WaitUntilDone',true,'Distance',0.2);
+                else
+                    disp('left go');
+                    moveleft(droneobj,'WaitUntilDone',true,'Distance',0.2);
+                end
+            end
+     ```
+     찾은 중심값과 드론 전체화면의 중심과 비교하여 이동
+     이때, 드론의 최소 이동거리 20cm 문제로 중심점을 정확하게 맞추는 것이 어려우므로 margin값  
+     
+     
+     ```matlab
+     if (length(row) < 50 || length(col) < 50)
+     ```
+     중심을 찾았다면, 전진 후 빨간색 표식의 크기로 종료 지점을 확인
+     
+     
 ##### 두 번째: 화면에 링의 파란 부분이 꽉 차지 않았을 때 중앙점을 찾고 통과
 원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
 
-##### 세 번째: 화면에 링의 파란 부분이 존재하지 않음
-드론이 더 상승하여 첫 번째나 두 번째 경우가 되도록 함
-
-##### 네 번째: 화면에 링의 파란 부분이 꽉 찼음
+첫 번째 경우와 다른 점은 전진반복문이 있다는 것
+     
+     
+##### 세 번째: 화면에 링의 파란 부분이 꽉 찼을 때 통과
+ ```matlab
+     elseif   (length(row) > 640000 && length(col) > 640000)
+```
+     꽉 찼을 때, 중심과 비교하여 상하좌우를 맞추는 알고리즘
+     
+     
+##### 네 번째: 화면에 링의 파란 부분이 꽉 차지 않았을 때 통과
 전체화면의 중심과 원의 중심과의 차이에 따라 원의 중심으로 이동
 
+     
 
+##### 다섯 번째: 예외 상황
+파랑색이 존재하지 않는다면 상승
+     
+     
+     
 ## 3단계
 * 90도 회전, 전진, 45도 회전한다.<br>
 * 2단계 알고리즘을 이용해 중앙점을 찾는다. <br>
 * 찾은 뒤 Yow(각도)를 조절한다. <br>
-: 화면에 보이는 파란 부분의 무게중심을 찾고, 무게중심과 중앙점이 어떻게 위치해있는지에 따라 각도 조절
+```matlab
+     image = snapshot(cameraObj);
+
+        image1R = image(:,:,1);
+        image1G = image(:,:,2);
+        image1B = image(:,:,3);
+
+        image_only_B = image1B-image1R/2-image1G/2;
+        bw = image_only_B > 55;
+        bw_origin = bw;
+
+
+        stats = regionprops(bw);
+        centerIdx=1;
+
+        if(~isempty(stats))
+            for i = 1:numel(stats)
+                if stats(i).Area>stats(centerIdx).Area
+                    centerIdx=i;
+                end
+            end
+            rectangle('Position', stats(centerIdx).BoundingBox, ...
+                'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+            hold on;
+
+            bw(stats(centerIdx).BoundingBox(2):stats(centerIdx).BoundingBox(2)+stats(centerIdx).BoundingBox(4),stats(centerIdx).BoundingBox(1):stats(centerIdx).BoundingBox(1)+stats(centerIdx).BoundingBox(3))=1;
+        end
+
+        [row_bounding, col_bounding] = find(bw);
+
+        cf_B=mean(col_bounding);
+
+        bw_origin1 = imfill(bw_origin,"holes");
+
+        [row_origin, col_origin] = find(bw_origin1);
+
+        cf_O=mean(col_origin);
+
+        correcting_cf = cf_B - cf_O;
+        disp('correcting_cf');
+        disp(correcting_cf);
+
+        if correcting_cf > 0
+            disp("turn left");
+
+            turn(droneobj, deg2rad(-10));
+            disp(correcting_cf);
+
+            Center_restart = 1;
+
+        
+        elseif correcting_cf < 0
+            disp("turn right");
+
+            turn(droneobj, deg2rad(10));
+            disp(correcting_cf);
+
+            Center_restart = 1;
+        else
+            Center_restart = 1;
+        end
+     ```
+     
+     : 화면에 보이는 파란 부분의 무게중심을 찾고, 무게중심과 중앙점이 어떻게 위치해있는지에 따라 각도 조절
 
 * 다시 2단계 알고리즘으로 중앙점 찾고 통과한다.
 
 
 
 
-# 소스 코드 설명
 
 
 
