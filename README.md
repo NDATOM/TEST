@@ -36,7 +36,8 @@
 
 # 알고리즘 설명 및 소스코드 설명
 
-# 1단계 알고리즘 및 소스코드 설명
+# 1단계 알고리즘 및 소스코드 설명[Uploading 1m_center.mat…]()
+
 드론 이륙 후,
 ```matlab                                                  
     image=snapshot(cameraObj);
@@ -178,6 +179,8 @@ reverseOn=0;
 
     [row, col] = find(bw);
 ```
+![1](https://user-images.githubusercontent.com/103023848/178750372-8dc5b423-5eee-45d9-9878-7e9abd61210c.jpg)
+
 드론 이미지에서, 파란색 성분만을 검출한다.<br>
 regionprops 함수로 속성 세트를 측정한다.<br>
 가장 큰 면적을 찾는다.<br>
@@ -207,6 +210,9 @@ BOX 안을 모두 흰색(1)으로 만든다.<br>
             cf=mean(col);
             viscircles([cf rf],3);
 ```
+![3](https://user-images.githubusercontent.com/103023848/178750662-50f4bd0e-016a-402f-9403-6398a6c3cc2a.jpg)
+
+    
 드론 이미지에서, 파란색 성분만을 검출<br>
 반전시킨 뒤, imerode 함수로 원의 노이즈를 제거 <br>
 반전시키는 이유는, 크로마키 천(1)이 드론과 가까워서 평균값을 찾는 것이 불가능할 때 원의 중심을 찾기 위함이다.
@@ -385,6 +391,8 @@ if (length(row) < 50 || length(col) < 50)
 
     end
 ```
+![2](https://user-images.githubusercontent.com/103023848/178750551-796b416d-4375-4209-a4c9-096389fc6691.jpg)
+
 크로마키 천에 bounding box를 검출하고 속을 1로 채운 직사각형의 중심을 찾는다.<br>
 크로마키 천의 구멍을 imfill 함수를 사용하여 1로 채운 사다리꼴의 중심을 찾는다.<br>
 직사각형의 중심을 기준으로 두 중심을 비교하여 드론이 변경해야하는 각도를 판단한다.<br>
