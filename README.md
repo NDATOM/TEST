@@ -124,7 +124,7 @@ if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파�
 드론이 보는 표식의 크기에 따라 가까운지 먼지 판단하고, moveforward로 지정된 시간 동안 지정된 추가 옵션에 따라 직진하게 한다.
 
 # 2단계 알고리즘 및 소스코드 설명
-5가지 경우를 반복한다. 
+3가지 경우를 반복한다. 
 
 ### 첫 번째: 링과 드론이 가까워서 링의 파란 부분이 화면에 꽉 찰 때
 - 원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
@@ -217,6 +217,116 @@ targetcenter_full은 [480 240]으로 정의되어 있다. <br>
 이때, 드론의 최소 이동거리 20cm 문제로 중심점을 정확하게 맞추는 것이 어려우므로 margin값을 사용한다.
 
 
+
+이때, 안정적으로 중심을 찾는 알고리즘을 적용한다.
+즉, 양옆 혹은 위아래 중 하나만 중심을 찾는 것이 아닌, 양옆과 위아래 모두 중심을 찾을 수 있도록 하였다.
+```matlab
+    elseif   (length(row) > 580000 && length(col) > 580000)% || reverseOn==1
+        reverseOn=1;
+        bw=~bw_origin;
+        
+        bw = imerode(bw,se);
+        bw = imdilate(bw,se);
+
+        [row, col] = find(bw);
+    
+        rf=mean(row);
+        cf=mean(col);
+        viscircles([cf rf],3);
+    
+        error_r=rf-targetcenter_full(2);
+        error_c=cf-targetcenter_full(1);
+%%
+        if abs(error_r)>margin2_full_ud  %위아래 판단, 에러가 특정 margin 밖에 있고, Col을 맞출 때
+            if error_r>0
+                disp('down full');
+               movedown(droneobj,'WaitUntilDone',true);
+            else
+                disp('up full');
+              moveup(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop up down full');
+            UDIn_full=UDIn_full+1;
+        end
+%%
+        if abs(error_c)>margin2_full  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때
+            if error_c>0
+                disp('right full');
+                moveright(droneobj,'WaitUntilDone',true);
+            else
+                disp('left full');
+                moveleft(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop right left full');
+            RLIn_full=RLIn_full+1;
+        end
+
+%% 파랑생이 꽉 찼을 때 안정적으로 중심을 찾기 위해
+% 양옆 혹은 위아래 하나만 중심을 찾았을 때
+        if RLIn_full~=UDIn_full
+            center_reset=1;
+        end
+        
+        if center_reset==1
+            UDIn_full=0;
+            RLIn_full=0;
+            center_reset=0;
+        end
+        
+        if RLIn_full > 2 && UDIn_full > 2 
+            fullgo=1;
+            disp('fullgo=1');
+        end
+%% 파랑이 꽉 차지 않았을 때 파랑이 보이고 상하좌우 움직일 방향 결정
+    elseif fullgo==0%if reverseOn==0 
+         %% 만약 이전 파랑영역보다 현재 파랑영역이 줄어들었으면 앞으로 이동 경연때도 필요한지는 모름
+
+        blue_pre=length(col_origin);
+
+        reverseOn=0;
+        [row, col] = find(bw);
+        rf=mean(row);
+        cf=mean(col);
+        viscircles([cf rf],3);
+        
+        error_r=rf-targetcenter_notfull(2);
+        error_c=cf-targetcenter_notfull(1);
+
+        if abs(error_r)>margin2_notfull %위아래 판단, 에러가 특정 margin 밖에 있을 때
+            if error_r>0
+                disp('down');
+                movedown(droneobj,'WaitUntilDone',true);
+            else
+                disp('up');
+                moveup(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop up down');
+            UDIn_notfull=UDIn_notfull+1;
+        end
+
+        if abs(error_c)>margin2_notfull %양옆 판단, 에러가 특정 margin 밖에 있을 때
+            if error_c>0
+                disp('right');
+                moveright(droneobj,'WaitUntilDone',true);
+
+            else
+                disp('left');
+                moveleft(droneobj,'WaitUntilDone',true);
+
+            end
+        else
+            disp('stop right left');
+            RLIn_notfull=RLIn_notfull+1;
+            
+        end
+```
+
+
+
+
 ```matlab
      if (length(row) < 50 || length(col) < 50)
 ```
@@ -224,7 +334,6 @@ targetcenter_full은 [480 240]으로 정의되어 있다. <br>
      
      
 
-??이때, 안정적으로 중심을 찾기 위해 UDIn_full과 UDIn_full으로 양옆 혹은 위아래 중 하나만 중심을 찾는 것이 아닌, 양옆과 위아래 모두 중심을 찾을 수 있도록 하였다.??
 
 
      
