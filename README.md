@@ -21,11 +21,11 @@
 <br>
      
 ### 1단계 전략 
-드론을 띄우고, 전진하면서 표식을 찾는다. 그리고 90도 회전한다.
+드론을 띄우고, 표식에 가깝도록 전진하여 표식을 확인한다. 그리고 90도 회전한다.
 ### 2단계 전략
-전진 후 파란 링의 중심을 찾고, 다시 전진하면서 표식을 찾는다. 그리고 90도 회전한다.
+전진 후 파란 링의 중심을 찾고, 다시 전진하면서 표식에 가깝도록 전진하여 확인한다. 그리고 90도 회전한다.
 ### 3단계 전략
-전진 후 45도 회전, 중심을 찾고 각도 조절 후 다시 중심을 찾는다. 그리고 전진 후 표식을 찾고 착지한다.
+전진 후 45도 회전하고, 중심을 찾고 각도를 조절한 뒤 다시 중심을 찾는다. 그리고 표식에 가깝도록 전진하여 확인 뒤 착지한다.
      
 <br>
      
@@ -67,7 +67,6 @@
 빨간색의 h, s, v 값, regionprops로 빨간색 표식의 속성을 찾는다.
      
 ```matlab
-     
 if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파랑이 없고 빨강도 없는 경우 앞으로 조금 가고 종료
         stage=2;
         moveforward(droneobj,'WaitUntilDone',true,'distance',0.7);
@@ -77,28 +76,31 @@ if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파�
         pause(0.5);
         moveforward(droneobj,'WaitUntilDone',true,'distance',1);
         break;
-
     end
 
     if(~isempty(stats))
+        centerIdx=1;
         for i = 1:numel(stats)
-        
-            if stats(i).Area > 3000
-                disp("stage = 2");
-                pause(1);
-                stage1image=bw;
-                turn(droneobj, deg2rad(90));
-                pause(0.5);
-                moveforward(droneobj,'WaitUntilDone',true,'distance',1);
-%                 moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
-                stage = 2;
-                break;
-            end
-
-            if stats(i).Area > 1000
-                red_close=1;
+            if stats(i).Area>stats(centerIdx).Area
+                centerIdx=i;
             end
         end
+        
+        if stats(centerIdx).Area > 3000
+            disp("stage = 2");
+            pause(1);
+            stage1image=bw;
+            turn(droneobj, deg2rad(90));
+            pause(0.5);
+            moveforward(droneobj,'WaitUntilDone',true,'distance',1);
+            stage = 2;
+            break;
+        end
+
+        if stats(centerIdx).Area > 1000
+            red_close=1;
+        end
+        
         if red_close==1
             moveforward(droneobj,'WaitUntilDone',true,'distance',0.3);
             disp("moveforward 0.4 slow");
@@ -120,18 +122,23 @@ if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파�
         moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
         disp("moveforward 1");
     end
+
+end
+
+reverseOn=0;
 ```
 드론이 보는 표식의 크기에 따라 가까운지 먼지 판단하고, moveforward로 지정된 시간 동안 지정된 추가 옵션에 따라 직진하게 한다.
+ 
+<br>
 
 # 2단계 알고리즘 및 소스코드 설명
 3가지 경우를 반복한다. 
 
 ### 첫 번째: 링과 드론이 가까워서 링의 파란 부분이 화면에 꽉 찰 때
-- 원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
-
+* 원의 중심과 링 배경 크로마키 천의 중심이 동일하다는 아이디어를 이용하여 중심을 찾는다.
 <br>
 
-링을 검출하는 알고리즘은 다음과 같다.
+링 배경 크로마키 을 검출하는 알고리즘은 다음과 같다.
 
 ```matlab
     image=snapshot(cameraObj);
@@ -173,6 +180,7 @@ BOX 안을 모두 흰색(1)으로 만든다.<br>
 
 <br>
 중심을 찾는 알고리즘은 다음과 같다.
+크로마키 천을 1, 링의 원 뒤로 보이는 배경을 0으로 하였을 때 1 값이 있는 좌표들의 평균점이 크로마키 천의 중심이다.
 
 ```matlab
             image=snapshot(cameraObj);
@@ -194,6 +202,7 @@ BOX 안을 모두 흰색(1)으로 만든다.<br>
 ```
 드론 이미지에서, 파란색 성분만을 검출<br>
 반전시킨 뒤, imerode 함수로 원의 노이즈를 제거 <br>
+imerode로 침식시킨 것은, 모폴로지 연산 중에 close 연산을 구현한 것이다.
 mean 함수로 중심값을 찾는다.
 
 <br>
@@ -273,7 +282,6 @@ if (length(row) < 50 || length(col) < 50)
 
 ```
 중심을 찾았다면, 전진 후 빨간색 표식의 크기로 종료 지점을 확인하고 3단계로 넘어간다.
-
 
 
 
