@@ -13,7 +13,7 @@ UDIn_notfull=0;
 RLIn_full=0;
 UDIn_full=0;
 center_reset=0;
-figure();hold on;
+% figure();hold on;
 margin2_notfull=40; % 마진 범위를 50으로 늘려서 right left 반복 문제를 해결
 margin2_full=60;
 margin2_full_ud=70;
@@ -27,7 +27,7 @@ correcting_yaw = 0;
 Center_restart = 0;
 blueOn=0;
 takeoff(droneobj);
-pause(0.5);
+% pause(0.5);
 %% 원하는 높이만큼 띄우는 코드
 % dist=readHeight(droneobj); %0.2가 가장 극단적 %1.7
 % disp(dist);
@@ -170,8 +170,8 @@ while(stage == 2)
                 centerIdx=i;
             end
         end
-        rectangle('Position', stats(centerIdx).BoundingBox, ...
-            'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+        %rectangle('Position', stats(centerIdx).BoundingBox, ...
+            %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
 
         stat_int=uint16(stats(centerIdx).BoundingBox);
         bw(stat_int(2):stat_int(2)+stat_int(4),stat_int(1):stat_int(1)+stat_int(3))=1;
@@ -203,7 +203,7 @@ while(stage == 2)
         
             rf=mean(row);
             cf=mean(col);
-            viscircles([cf rf],3);
+            %viscircles([cf rf],3);
    
             error_c=cf-targetcenter_full(1); 
              
@@ -285,8 +285,8 @@ while(stage == 2)
                         centerIdx=i;
                     end
                 end
-                rectangle('Position', stats(centerIdx).BoundingBox, ...
-                    'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+                %rectangle('Position', stats(centerIdx).BoundingBox, ...
+                    %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
                 stat_int=uint16(stats(centerIdx).BoundingBox);
                 bw(stat_int(2):stat_int(2)+stat_int(4),stat_int(1):stat_int(1)+stat_int(3))=1;
             end
@@ -294,7 +294,7 @@ while(stage == 2)
             [row, col] = find(bw);
             rf=mean(row);
             cf=mean(col);
-            viscircles([cf rf],3);
+            %viscircles([cf rf],3);
             
             error_c=cf-targetcenter_notfull(1);
             
@@ -343,7 +343,7 @@ while(stage == 2)
     
         rf=mean(row);
         cf=mean(col);
-        viscircles([cf rf],3);
+        %viscircles([cf rf],3);
     
         error_r=rf-targetcenter_full(2);
         error_c=cf-targetcenter_full(1);
@@ -404,7 +404,7 @@ while(stage == 2)
         [row, col] = find(bw);
         rf=mean(row);
         cf=mean(col);
-        viscircles([cf rf],3);
+        %viscircles([cf rf],3);
         
         error_r=rf-targetcenter_notfull(2);
         error_c=cf-targetcenter_notfull(1);
@@ -502,8 +502,8 @@ while(stage == 3)
                 centerIdx=i;
             end
         end
-        rectangle('Position', stats(centerIdx).BoundingBox, ...
-            'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+        %rectangle('Position', stats(centerIdx).BoundingBox, ...
+            %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
 
         stat_int=uint16(stats(centerIdx).BoundingBox);
         bw(stat_int(2):stat_int(2)+stat_int(4),stat_int(1):stat_int(1)+stat_int(3))=1;
@@ -524,7 +524,7 @@ while(stage == 3)
 
          rf=mean(row);
          cf=mean(col);
-         viscircles([cf rf],3);
+         %viscircles([cf rf],3);
 
          error_r=rf-targetcenter_full(2);
          error_c=cf-targetcenter_full(1);
@@ -588,7 +588,7 @@ while(stage == 3)
         [row, col] = find(bw);
         rf=mean(row);
         cf=mean(col);
-        viscircles([cf rf],3);
+        %viscircles([cf rf],3);
 
         error_r=rf-targetcenter_notfull(2);
         error_c=cf-targetcenter_notfull(1);
@@ -667,8 +667,8 @@ if correcting_yaw == 1
                 centerIdx=i;
             end
         end
-        rectangle('Position', stats(centerIdx).BoundingBox, ...
-            'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+        %rectangle('Position', stats(centerIdx).BoundingBox, ...
+            %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
         hold on;
 
         stat_int=uint16(stats(centerIdx).BoundingBox);
@@ -756,8 +756,8 @@ while(Center_restart == 1)
                 centerIdx=i;
             end
         end
-        rectangle('Position', stats(centerIdx).BoundingBox, ...
-            'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+        %rectangle('Position', stats(centerIdx).BoundingBox, ...
+            %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
 
         stat_int=uint16(stats(centerIdx).BoundingBox);
         bw(stat_int(2):stat_int(2)+stat_int(4),stat_int(1):stat_int(1)+stat_int(3))=1;
@@ -791,7 +791,7 @@ while(Center_restart == 1)
 
             rf=mean(row);
             cf=mean(col);
-            viscircles([cf rf],3);
+            %viscircles([cf rf],3);
 
             error_c=cf-targetcenter_full(1);
 
@@ -876,8 +876,8 @@ while(Center_restart == 1)
                     centerIdx=i;
                 end
             end
-            rectangle('Position', stats(centerIdx).BoundingBox, ...
-                    'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+            %rectangle('Position', stats(centerIdx).BoundingBox, ...
+                    %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
                 stat_int=uint16(stats(centerIdx).BoundingBox);
                 bw(stat_int(2):stat_int(2)+stat_int(4),stat_int(1):stat_int(1)+stat_int(3))=1;
             end
@@ -915,7 +915,7 @@ while(Center_restart == 1)
 
         rf=mean(row);
         cf=mean(col);
-        viscircles([cf rf],3);
+        %viscircles([cf rf],3);
 
         error_r=rf-targetcenter_full(2);
         error_c=cf-targetcenter_full(1);
@@ -976,7 +976,7 @@ while(Center_restart == 1)
         [row, col] = find(bw);
         rf=mean(row);
         cf=mean(col);
-        viscircles([cf rf],3);
+        %viscircles([cf rf],3);
 
         error_r=rf-targetcenter_notfull(2);
         error_c=cf-targetcenter_notfull(1);
