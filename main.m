@@ -1,0 +1,1159 @@
+
+clear all;
+close;
+droneobj = ryze()
+cameraObj = camera(droneobj);
+se = strel('disk',70);
+stage=1;
+targetcenter_notfull=[480 300];
+saveImage=[];
+RLIn_notfull=0;
+UDIn_notfull=0;
+RLIn_full=0;
+UDIn_full=0;
+center_reset=0;
+figure();hold on;
+margin2_notfull=40; % 마진 범위를 50으로 늘려서 right left 반복 문제를 해결
+margin2_full=60;
+margin2_full_ud=70;
+decrese_margin=800;
+blue_pre=0;
+notfullgo=0;
+fullgo=0;
+goCount=0;
+downCount=0;
+correcting_yaw = 0;
+Center_restart = 0;
+
+takeoff(droneobj);
+pause(0.5);
+%% 원하는 높이만큼 띄우는 코드
+% dist=readHeight(droneobj); %0.2가 가장 극단적 %1.7
+% disp(dist);
+% uptarget=1.0-dist;
+
+% if uptarget>=0.2
+%     moveup(droneobj,'Distance',uptarget,'WaitUntilDone',true);
+% elseif uptarget <= -0.2
+%     movedown(droneobj,'Distance',abs(uptarget),'WaitUntilDone',true); 
+% end
+
+moveup(droneobj,'Distance',0.2,'WaitUntilDone',true);
+%%
+
+while(stage == 1)
+    image=snapshot(cameraObj);
+%     imshow(image);
+%     imageHSV=rgb2hsv(image);
+%     image1H = imageHSV(:,:,1);
+%     image1S = imageHSV(:,:,2);
+%     image1V = imageHSV(:,:,3);
+% 
+%     imageR_H = image1H <= 0.01 | image1H >= 0.97;
+%     imageR_S = image1S >= 0.95 & image1S <= 1.0;
+%     imageR_V = image1V >= 0.38 & image1V <= 0.41;
+%     imageR_combi = imageR_H & imageR_S & imageR_V;
+
+    image1R = image(:,:,1);
+    image1G = image(:,:,2);
+    image1B = image(:,:,3);
+
+    image_only_R=image1R-image1G/2-image1B/2;
+    bw = image_only_R > 55;
+    
+    image_only_B=image1B-image1R/2-image1G/2;
+    bw2 = image_only_B > 55;
+    [row2, col2] = find(bw2);
+
+    imshow(bw2);
+    stats = regionprops(bw);
+    centerIdx=1;
+    redOn=0;
+    red_close=0;
+    disp('length(row2) = ');
+    disp(length(row2));
+    
+    if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 %파랑이 없고 빨강도 없는 경우 앞으로 조금 가고 종료
+        stage=2;
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.8);
+        disp('if (length(row) < 50 || length(col) < 50) stage1 end');
+        stage1image=bw;
+        turn(droneobj, deg2rad(90));
+        pause(0.5);
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.8);
+        break;
+%     elseif length(row2) > 50 && length(row2) < 150000
+%         moveforward(droneobj,1,'WaitUntilDone',true,'Speed',0.8);
+%         disp('movefast');
+%     else
+%         moveforward(droneobj,1,'WaitUntilDone',true,'Speed',0.5);
+%         disp('moveslow');
+    end
+
+
+
+    if(~isempty(stats))
+        for i = 1:numel(stats)
+        
+            if stats(i).Area > 3000
+                disp("stage = 2");
+                pause(1);
+                stage1image=bw;
+                turn(droneobj, deg2rad(90));
+                pause(0.5);
+                moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+%                 moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
+                stage = 2;
+                break;
+            end
+
+            if stats(i).Area > 1000
+                red_close=1;
+            end
+        end
+        if red_close==1
+            moveforward(droneobj,'WaitUntilDone',true,'distance',0.3);
+            disp("moveforward 0.4 slow");
+        else
+            moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+            disp("moveforward 0.4 fast");
+        end
+
+        redOn=1;
+    else
+        redOn=0;
+        red_close=0;
+    end
+
+    if red_close==1 && stage==1
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.2);
+        disp("moveforward 0.4 slow not box");
+    elseif redOn==0 && stage==1
+        moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
+        disp("moveforward 1");
+    end
+
+end
+
+reverseOn=0;
+%% stage2
+while(stage == 2)
+    
+    image=snapshot(cameraObj);
+    nRows = size(image, 1);
+    nCols = size(image, 2);
+
+    image1R = image(:,:,1);
+    image1G = image(:,:,2);
+    image1B = image(:,:,3);
+
+    image_only_B=image1B-image1R/2-image1G/2;
+    bw = image_only_B > 55;
+    bw_origin=bw;
+
+    stats = regionprops(bw);   
+    centerIdx=1;
+
+    if(~isempty(stats)) 
+        for i = 1:numel(stats)
+            if stats(i).Area>stats(centerIdx).Area
+                centerIdx=i;
+            end
+        end
+        rectangle('Position', stats(centerIdx).BoundingBox, ...
+            'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+
+        bw(stats(centerIdx).BoundingBox(2):stats(centerIdx).BoundingBox(2)+stats(centerIdx).BoundingBox(4),stats(centerIdx).BoundingBox(1):stats(centerIdx).BoundingBox(1)+stats(centerIdx).BoundingBox(3))=1;
+    end
+    [row_origin, col_origin] = find(bw_origin);
+
+    [row, col] = find(bw);
+    
+%% 1m  until find red
+%% 파랑이 꽉찼을 때 중앙점 수렴 및 통과하는 코드
+    if fullgo==1
+        downCount=0;
+        while 1 %하강 반복문 최대 2번 하강
+            image=snapshot(cameraObj);
+            image1R = image(:,:,1);
+            image1G = image(:,:,2);
+            image1B = image(:,:,3);
+        
+            image_only_B=image1B-image1R/2-image1G/2;
+            bw = image_only_B > 55;
+            bw=~bw;
+        
+            bw = imerode(bw,se);
+%             bw = imdilate(bw,se);
+    
+            [row, col] = find(bw);
+        
+            rf=mean(row);
+            cf=mean(col);
+            viscircles([cf rf],3);
+        
+            error_r=rf-targetcenter_notfull(2);
+            error_c=cf-targetcenter_notfull(1);
+            
+            down1=bw;
+            
+            disp(error_r);
+
+            
+            if abs(error_r)<(100-(targetcenter_notfull(2)-360)) || downCount==2 % 1m 에서 -30
+                disp('if abs(error_r)<100');
+                break;
+            end
+            downCount=downCount+1;
+            movedown(droneobj,'WaitUntilDone',true);
+        end
+        goCount=0;
+        while 1
+            goCount=goCount+1;
+            if goCount<2 % 한번 하강
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
+            else
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',0.8);
+            end
+
+             bw=~bw_origin; % 원형만 남게 
+        
+            bw = imerode(bw,se);
+    
+            [row, col] = find(bw);
+        
+            rf=mean(row);
+            cf=mean(col);
+            viscircles([cf rf],3);
+   
+            error_c=cf-480; 
+             
+            if abs(error_c)>margin2_full %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
+                if error_c>0
+                    disp('right go');
+                    moveright(droneobj,'WaitUntilDone',true,'Distance',0.2);
+                else
+                    disp('left go');
+                    moveleft(droneobj,'WaitUntilDone',true,'Distance',0.2);
+                end
+            end
+
+            image=snapshot(cameraObj);
+            image1R = image(:,:,1);
+            image1G = image(:,:,2);
+            image1B = image(:,:,3);
+        
+            image_only_B=image1B-image1R/2-image1G/2;
+            bw = image_only_B > 55;
+            [row, col] = find(bw);
+            if (length(row) < 50 || length(col) < 50)  %중심 찾은 경우
+                stage=3;
+                moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+                disp('if (length(row) < 50 || length(col) < 50)');
+                break;
+            end
+
+            % 빨강 표식 크기로 종료지점 확인 파랑이 꽉찬경우
+            image=snapshot(cameraObj);
+            imageHSV=rgb2hsv(image);
+            image1H = imageHSV(:,:,1);
+            image1S = imageHSV(:,:,2);
+            image1V = imageHSV(:,:,3);
+            imageG_H = image1H >= 0.29 & image1H <= 0.31;
+            imageG_S = image1S >= 0.5 & image1S <= 0.6;
+            imageG_V = image1V >= 0.4 & image1V <= 0.5;
+            imageG_combi = imageG_H & imageG_S & imageG_V;
+            imshow(imageG_combi);
+            [rowG, colG]=find(imageG_combi);
+            if length(rowG) > 3000 %임의의 값 
+                stage=3;
+                disp('if length(rowR) > 3000');
+                break;
+            end
+
+        end
+        
+        break;
+
+%% 파랑이 꽉차지 않았을 때 중앙점 수렴 및 통과하는 코드
+    elseif notfullgo==1
+        %%  하강
+        downCount=0;
+        while 1 %하강 반복문
+            image=snapshot(cameraObj);
+            image1R = image(:,:,1);
+            image1G = image(:,:,2);
+            image1B = image(:,:,3);
+        
+            image_only_B=image1B-image1R/2-image1G/2;
+            bw = image_only_B > 55;
+            stats = regionprops(bw);   
+            centerIdx=1;
+            if(~isempty(stats)) 
+                for i = 1:numel(stats)
+                    if stats(i).Area>stats(centerIdx).Area
+                        centerIdx=i;
+                    end
+                end
+                bw(stats(centerIdx).BoundingBox(2):stats(centerIdx).BoundingBox(2)+stats(centerIdx).BoundingBox(4),stats(centerIdx).BoundingBox(1):stats(centerIdx).BoundingBox(1)+stats(centerIdx).BoundingBox(3))=1;
+            end
+            
+            [row, col] = find(bw);
+            rf=mean(row);
+            cf=mean(col);
+            viscircles([cf rf],3);
+            down1=bw;
+            
+            error_r=rf-targetcenter_notfull(2);
+            disp(error_r);
+
+            if length(find(notfullbw))<350000
+                if error_r<-150-(targetcenter_notfull(2)-360) % 1m 에서 -30
+                    disp('error_r<-140');
+                    break;
+                end
+            else
+                if error_r<-100-(targetcenter_notfull(2)-360) % 1m 에서 -30
+                    disp('error_r<-100');
+                    break;
+                end
+            end
+
+            movedown(droneobj,'WaitUntilDone',true);
+        end
+        
+%%      
+        goCount=0;
+        while 1 %전진반복문
+            goCount=goCount+1;
+            if goCount<3 
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
+            else
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',0.8);
+            end
+            
+            if abs(error_c)>margin2_notfull  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
+                if error_c>0
+                    disp('right go');
+                    moveright(droneobj,'WaitUntilDone',true,'Distance',0.3);
+                else
+                    disp('left go');
+                    moveleft(droneobj,'WaitUntilDone',true,'Distance',0.3);
+                end
+            end
+
+            image=snapshot(cameraObj);
+            image1R = image(:,:,1);
+            image1G = image(:,:,2);
+            image1B = image(:,:,3);
+        
+            image_only_B=image1B-image1R/2-image1G/2;
+            bw = image_only_B > 55;
+            [row, col] = find(bw);
+            if (length(row) < 50 || length(col) < 50) %파랑이 없는 경우 종료
+                stage=3;
+                moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+                disp('if (length(row) < 50 || length(col) < 50)');
+                break;
+            end
+
+            % 빨강 표식 크기로 종료지점 확인 파랑 안찬경우
+            image=snapshot(cameraObj);
+            imageHSV=rgb2hsv(image);
+            image1H = imageHSV(:,:,1);
+            image1S = imageHSV(:,:,2);
+            image1V = imageHSV(:,:,3);
+            imageG_H = image1H >= 0.29 & image1H <= 0.31;
+            imageG_S = image1S >= 0.5 & image1S <= 0.6;
+            imageG_V = image1V >= 0.4 & image1V <= 0.5;
+            imageG_combi = imageG_H & imageG_S & imageG_V;
+            imshow(imageG_combi);
+            [rowG, colG]=find(imageG_combi);
+            length(rowG) 
+            if length(rowG) > 3000
+                stage=3;
+                disp('length(rowR) > 3000')
+                break;
+            end
+        end
+        break;
+%% 파랑이 존재하지 않는다면 올라가자  안보일 때 올라가도 파랑이 안보이는 경우는 생기지 않음(아직까진)
+    elseif (length(row_origin) < 50 || length(col_origin) < 50) 
+        disp('up');
+        moveup(droneobj,'WaitUntilDone',true);
+
+%% 파랑이 꽉찬다면
+    elseif   (length(row) > 640000 && length(col) > 640000)% || reverseOn==1
+        reverseOn=1;
+        bw=~bw_origin;
+        
+        bw = imerode(bw,se);
+%         bw = imdilate(bw,se);
+
+        [row, col] = find(bw);
+    
+        rf=mean(row);
+        cf=mean(col);
+        viscircles([cf rf],3);
+    
+        error_r=rf-360;
+        error_c=cf-480;
+%%
+        if abs(error_r)>margin2_full_ud  %위아래 판단, 에러가 특정 margin 밖에 있고, Col을 맞출 때
+            if error_r>0
+                disp('down full');
+               movedown(droneobj,'WaitUntilDone',true);
+            else
+                disp('up full');
+              moveup(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop up down full');
+            UDIn_full=UDIn_full+1;
+        end
+%%
+        if abs(error_c)>margin2_full  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때
+            if error_c>0
+                disp('right full');
+                moveright(droneobj,'WaitUntilDone',true);
+            else
+                disp('left full');
+                moveleft(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop right left full');
+            RLIn_full=RLIn_full+1;
+        end
+
+%% 파랑생이 꽉 찼을 때 안정적으로 중심을 찾기 위해
+% 양옆 혹은 위아래 하나만 중심을 찾았을 때
+        if RLIn_full~=UDIn_full
+            center_reset=1;
+        end
+        
+        if center_reset==1
+            UDIn_full=0;
+            RLIn_full=0;
+            center_reset=0;
+        end
+        
+        if RLIn_full > 2 && UDIn_full > 2 
+            fullgo=1;
+            disp('fullgo=1');
+        end
+%% 파랑이 꽉 차지 않았을 때 파랑이 보이고 상하좌우 움직일 방향 결정
+    else%if reverseOn==0 
+         %% 만약 이전 파랑영역보다 현재 파랑영역이 줄어들었으면 앞으로 이동 경연때도 필요한지는 모름
+%     if blue_pre > length(col_origin)+decrese_margin
+%         moveforward(droneobj,'WaitUntilDone',true);
+%         disp('blue is decrese');
+%     end
+
+    blue_pre=length(col_origin);
+
+        reverseOn=0;
+        [row, col] = find(bw);
+        rf=mean(row);
+        cf=mean(col);
+        viscircles([cf rf],3);
+        
+        error_r=rf-targetcenter_notfull(2);
+        error_c=cf-targetcenter_notfull(1);
+
+        if abs(error_r)>margin2_notfull %위아래 판단, 에러가 특정 margin 밖에 있을 때
+            if error_r>0
+                disp('down');
+                movedown(droneobj,'WaitUntilDone',true);
+            else
+                disp('up');
+                moveup(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop up down');
+            UDIn_notfull=UDIn_notfull+1;
+        end
+
+        if abs(error_c)>margin2_notfull %양옆 판단, 에러가 특정 margin 밖에 있을 때
+            if error_c>0
+                disp('right');
+                moveright(droneobj,'WaitUntilDone',true);
+
+            else
+                disp('left');
+                moveleft(droneobj,'WaitUntilDone',true);
+
+            end
+        else
+            disp('stop right left');
+            RLIn_notfull=RLIn_notfull+1;
+            
+        end
+
+%% 파랑생이 꽉 안찼을 때 안정적으로 중심을 찾기 위해
+% 양옆 혹은 위아래 하나만 중심을 찾았을 때
+        if RLIn_notfull~=UDIn_notfull
+            center_reset=1;
+        end
+        
+        if center_reset==1 
+            UDIn_notfull=0;
+            RLIn_notfull=0;
+            center_reset=0;
+        end
+        
+        if RLIn_notfull > 2 && UDIn_notfull > 2 
+            notfullgo=1;
+            disp('notfullgo');
+            notfullbw=bw;
+        end
+        
+    end
+
+    imshow(bw);
+
+end
+
+
+
+
+
+%% 90도 -> 전진 -> 45도 -> 중심찾기 -> yow 조절 -> 중심찾고 전진
+
+
+    turn(droneobj, deg2rad(90));
+    moveforward(droneobj,0.8,"Speed",1);
+    moveforward(droneobj,0.4,"Speed",1);
+
+    turn(droneobj,deg2rad(45));
+
+
+
+    disp("stage 3 in");
+    while(stage==3)
+
+        %% 
+        image=snapshot(cameraObj);
+        nRows = size(image, 1);
+        nCols = size(image, 2);
+
+        image1R = image(:,:,1);
+        image1G = image(:,:,2);
+        image1B = image(:,:,3);
+
+        image_only_B=image1B-image1R/2-image1G/2;
+        bw = image_only_B > 55;
+        bw_origin=bw;
+
+        stats = regionprops(bw);
+        centerIdx=1;
+
+        if(~isempty(stats))
+            for i = 1:numel(stats)
+                if stats(i).Area>stats(centerIdx).Area
+                    centerIdx=i;
+                end
+            end
+            rectangle('Position', stats(centerIdx).BoundingBox, ...
+                'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+
+            bw(stats(centerIdx).BoundingBox(2):stats(centerIdx).BoundingBox(2)+stats(centerIdx).BoundingBox(4),stats(centerIdx).BoundingBox(1):stats(centerIdx).BoundingBox(1)+stats(centerIdx).BoundingBox(3))=1;
+        end
+        [row_origin, col_origin] = find(bw_origin);
+
+        [row, col] = find(bw);
+
+        %%파랑이 꽉찼을 경우
+         if (length(row) > 640000 && length(col) > 640000)
+             reverseOn=1;
+             bw=~bw_origin;
+
+             bw = imerode(bw,se);
+
+             [row, col] = find(bw);
+
+             rf=mean(row);
+             cf=mean(col);
+             viscircles([cf rf],3);
+
+             error_r=rf-360;
+             error_c=cf-480;
+
+%%
+            if abs(error_r)>margin2_full_ud  %위아래 판단, 에러가 특정 margin 밖에 있고, Col을 맞출 때
+                if error_r>0
+                    disp('down full');
+                    movedown(droneobj,'WaitUntilDone',true);
+                else
+                    disp('up full');
+                    moveup(droneobj,'WaitUntilDone',true);
+                end
+            else
+                disp('stop up down full');
+                UDIn_full=UDIn_full+1;
+            end
+%%
+            if abs(error_c)>margin2_full  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때
+                if error_c>0
+                    disp('right full');
+                    moveright(droneobj,'WaitUntilDone',true);
+                else
+                    disp('left full');
+                    moveleft(droneobj,'WaitUntilDone',true);
+                end
+            else
+                disp('stop right left full');
+                RLIn_full=RLIn_full+1;
+            end
+
+%% 파랑생이 꽉 찼을 때 안정적으로 중심을 찾기 위해
+% 양옆 혹은 위아래 하나만 중심을 찾았을 때
+            if RLIn_full~=UDIn_full
+                center_reset=1;
+            end
+            
+            if center_reset==1
+                UDIn_full=0;
+                RLIn_full=0;
+                center_reset=0;
+            end
+            
+            if RLIn_full > 2 && UDIn_full > 2 
+                fullgo=1;
+                disp('fullgo=1');
+            end
+         
+%% 파랑이 꽉 차지 않았을 때 파랑이 보이고 상하좌우 움직일 방향 결정
+        else%if reverseOn==0 
+            %% 만약 이전 파랑영역보다 현재 파랑영역이 줄어들었으면 앞으로 이동 경연때도 필요한지는 모름
+%             if blue_pre > length(col_origin)+decrese_margin
+%                 moveforward(droneobj,'WaitUntilDone',true);
+%                 disp('blue is decrese');
+%             end
+
+            blue_pre=length(col_origin);
+
+            reverseOn=0;
+            [row, col] = find(bw);
+            rf=mean(row);
+            cf=mean(col);
+            viscircles([cf rf],3);
+
+            error_r=rf-targetcenter_notfull(2);
+            error_c=cf-targetcenter_notfull(1);
+
+            if abs(error_r)>margin2_notfull %위아래 판단, 에러가 특정 margin 밖에 있을 때
+                if error_r>0
+                    disp('down');
+                    movedown(droneobj,'WaitUntilDone',true);
+                else
+                    disp('up');
+                    moveup(droneobj,'WaitUntilDone',true);
+                end
+            else
+                disp('stop up down');
+                UDIn_notfull=UDIn_notfull+1;
+            end
+
+            if abs(error_c)>margin2_notfull %양옆 판단, 에러가 특정 margin 밖에 있을 때
+                if error_c>0
+                    disp('right');
+                    moveright(droneobj,'WaitUntilDone',true);
+
+                else
+                    disp('left');
+                    moveleft(droneobj,'WaitUntilDone',true);
+
+                end
+            else
+                disp('stop right left');
+                RLIn_notfull=RLIn_notfull+1;
+
+            end
+
+            %% 파랑생이 꽉 안찼을 때 안정적으로 중심을 찾기 위해
+            % 양옆 혹은 위아래 하나만 중심을 찾았을 때
+            if RLIn_notfull~=UDIn_notfull
+                center_reset=1;
+            end
+
+            if center_reset==1
+                UDIn_notfull=0;
+                RLIn_notfull=0;
+                center_reset=0;
+            end
+
+            if RLIn_notfull > 2 && UDIn_notfull > 2
+                correcting_yaw=1;
+                disp('correcting_yaw');
+                notfullbw=bw;
+                stage = 0;
+            end
+        
+         end
+
+    imshow(bw);
+    end
+%% Yaw 조절
+    if correcting_yaw == 1
+        image = snapshot(cameraObj);
+
+        image1R = image(:,:,1);
+        image1G = image(:,:,2);
+        image1B = image(:,:,3);
+
+        image_only_B = image1B-image1R/2-image1G/2;
+        bw = image_only_B > 55;
+        bw_origin = bw;
+
+
+        stats = regionprops(bw);
+        centerIdx=1;
+
+        if(~isempty(stats))
+            for i = 1:numel(stats)
+                if stats(i).Area>stats(centerIdx).Area
+                    centerIdx=i;
+                end
+            end
+            rectangle('Position', stats(centerIdx).BoundingBox, ...
+                'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+            hold on;
+
+            bw(stats(centerIdx).BoundingBox(2):stats(centerIdx).BoundingBox(2)+stats(centerIdx).BoundingBox(4),stats(centerIdx).BoundingBox(1):stats(centerIdx).BoundingBox(1)+stats(centerIdx).BoundingBox(3))=1;
+        end
+
+        [row_bounding, col_bounding] = find(bw);
+
+        cf_B=mean(col_bounding);
+
+        bw_origin1 = imfill(bw_origin,"holes");
+
+        [row_origin, col_origin] = find(bw_origin1);
+
+        cf_O=mean(col_origin);
+
+        correcting_cf = cf_B - cf_O;
+        disp('correcting_cf');
+        disp(correcting_cf);
+
+        if correcting_cf > 5
+            disp("turn left 10");
+
+            turn(droneobj, deg2rad(-10));
+            disp(correcting_cf);
+
+            Center_restart = 1;
+
+        elseif correcting_cf > 2
+            disp("turn right");
+
+            turn(droneobj, deg2rad(-5));
+            disp(correcting_cf);
+
+            Center_restart = 1;
+            
+        elseif correcting_cf < -5
+            disp("turn right");
+
+            turn(droneobj, deg2rad(10));
+            disp(correcting_cf);
+
+            Center_restart = 1;
+
+        elseif correcting_cf < -2
+            disp("turn right");
+
+            turn(droneobj, deg2rad(5));
+            disp(correcting_cf);
+
+            Center_restart = 1;
+
+        else
+            disp("correcting yaw")
+            Center_restart = 1;
+        end
+
+    end
+
+    %% 다시 중앙 맞추고 전진
+    reverseOn=0;
+    fullgo=0;
+    notfullgo=0;
+    center_reset=1;
+while(Center_restart == 1)
+    image=snapshot(cameraObj);
+    nRows = size(image, 1);
+    nCols = size(image, 2);
+
+    image1R = image(:,:,1);
+    image1G = image(:,:,2);
+    image1B = image(:,:,3);
+
+    image_only_B=image1B-image1R/2-image1G/2;
+    bw = image_only_B > 55;
+    bw_origin=bw;
+
+    stats = regionprops(bw);
+    centerIdx=1;
+
+    if(~isempty(stats))
+        for i = 1:numel(stats)
+            if stats(i).Area>stats(centerIdx).Area
+                centerIdx=i;
+            end
+        end
+        rectangle('Position', stats(centerIdx).BoundingBox, ...
+            'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+
+        bw(stats(centerIdx).BoundingBox(2):stats(centerIdx).BoundingBox(2)+stats(centerIdx).BoundingBox(4),stats(centerIdx).BoundingBox(1):stats(centerIdx).BoundingBox(1)+stats(centerIdx).BoundingBox(3))=1;
+    end
+    [row_origin, col_origin] = find(bw_origin);
+
+    [row, col] = find(bw);
+
+    %% 1m  until find red
+    %% 파랑이 꽉찼을 때 중앙점 수렴 및 통과하는 코드
+    if fullgo==1
+        downCount=0;
+        while 1 %하강 반복문 최대 2번 하강
+            image=snapshot(cameraObj);
+            image1R = image(:,:,1);
+            image1G = image(:,:,2);
+            image1B = image(:,:,3);
+
+            image_only_B=image1B-image1R/2-image1G/2;
+            bw = image_only_B > 55;
+            bw=~bw;
+
+            bw = imerode(bw,se);
+            %             bw = imdilate(bw,se);
+
+            [row, col] = find(bw);
+
+            rf=mean(row);
+            cf=mean(col);
+            viscircles([cf rf],3);
+
+            error_r=rf-360;
+            error_c=cf-480;
+
+            down1=bw;
+
+            disp(error_r);
+
+
+            if abs(error_r)<100 || downCount==2 % 1m 에서 -30
+                disp('if abs(error_r)<100');
+                break;
+            end
+            downCount=downCount+1;
+            movedown(droneobj,'WaitUntilDone',true);
+        end
+        goCount=0;
+        while 1
+            goCount=goCount+1;
+            if goCount<2 
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
+            else
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',0.8);
+            end
+
+            bw=~bw_origin; % 원형만 남게
+
+            bw = imerode(bw,se);
+
+            [row, col] = find(bw);
+
+            rf=mean(row);
+            cf=mean(col);
+            viscircles([cf rf],3);
+
+            error_c=cf-480;
+
+            if abs(error_c)>margin2_full %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
+                if error_c>0
+                    disp('right go');
+                    moveright(droneobj,'WaitUntilDone',true,'Distance',0.2);
+                else
+                    disp('left go');
+                    moveleft(droneobj,'WaitUntilDone',true,'Distance',0.2);
+                end
+            end
+
+            image=snapshot(cameraObj);
+            image1R = image(:,:,1);
+            image1G = image(:,:,2);
+            image1B = image(:,:,3);
+
+            image_only_B=image1B-image1R/2-image1G/2;
+            bw = image_only_B > 55;
+            [row, col] = find(bw);
+            if (length(row) < 50 || length(col) < 50)  %중심 찾은 경우
+                stage=3;
+                moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+                disp('if (length(row) < 50 || length(col) < 50)');
+                break;
+            end
+
+            % 빨강 표식 크기로 종료지점 확인 파랑이 꽉찬경우
+            image=snapshot(cameraObj);
+            imageHSV=rgb2hsv(image);
+            image1H = imageHSV(:,:,1);
+            image1S = imageHSV(:,:,2);
+            image1V = imageHSV(:,:,3);
+            imageR_H = image1H <= 0.06 | image1H >= 0.94;
+            imageR_S = image1S >= 0.5 & image1S <= 1.0;
+            imageR_V = image1V >= 0.1 & image1V <= 0.9;
+            imageR_combi = imageR_H & imageR_S & imageR_V;
+            imshow(imageR_combi);
+            [rowR, colR]=find(imageR_combi);
+            if length(rowR) > 3000 %임의의 값
+                disp('if length(rowR) > 3000 stage=3');
+                break;
+            end
+
+        end
+
+        %%
+        land(droneobj);
+        break;
+
+        %% 파랑이 꽉차지 않았을 때 중앙점 수렴 및 통과하는 코드
+    elseif notfullgo==1
+        %%  하강
+        downCount=0;
+
+
+        while 1 %하강 반복문
+            image=snapshot(cameraObj);
+            image1R = image(:,:,1);
+            image1G = image(:,:,2);
+            image1B = image(:,:,3);
+
+            image_only_B=image1B-image1R/2-image1G/2;
+            bw = image_only_B > 55;
+            stats = regionprops(bw);
+            centerIdx=1;
+            if(~isempty(stats))
+                for i = 1:numel(stats)
+                    if stats(i).Area>stats(centerIdx).Area
+                        centerIdx=i;
+                    end
+                end
+                bw(stats(centerIdx).BoundingBox(2):stats(centerIdx).BoundingBox(2)+stats(centerIdx).BoundingBox(4),stats(centerIdx).BoundingBox(1):stats(centerIdx).BoundingBox(1)+stats(centerIdx).BoundingBox(3))=1;
+            end
+
+            [row, col] = find(bw);
+            rf=mean(row);
+            cf=mean(col);
+            viscircles([cf rf],3);
+            down1=bw;
+
+            error_r=rf-targetcenter_notfull(2);
+            disp(error_r);
+
+            if length(find(notfullbw))<350000
+                if error_r<-150 % 1m 에서 -30
+                    disp('error_r<-140');
+                    break;
+                end
+            else
+                if error_r<-100 % 1m 에서 -30
+                    disp('error_r<-100');
+                    break;
+                end
+            end
+
+            movedown(droneobj,'WaitUntilDone',true);
+        end
+
+        %%
+        goCount=0;
+        while 1 %전진반복문
+            goCount=goCount+1;
+            if goCount<3 %최대 2번 앞으로 80cm 전진
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
+            else
+                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',0.8);
+            end
+
+            if abs(error_c)>margin2_notfull  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
+                if error_c>0
+                    disp('right go');
+                    moveright(droneobj,'WaitUntilDone',true,'Distance',0.3);
+                else
+                    disp('left go');
+                    moveleft(droneobj,'WaitUntilDone',true,'Distance',0.3);
+                end
+            end
+
+            image=snapshot(cameraObj);
+            image1R = image(:,:,1);
+            image1G = image(:,:,2);
+            image1B = image(:,:,3);
+
+            image_only_B=image1B-image1R/2-image1G/2;
+            bw = image_only_B > 55;
+            [row, col] = find(bw);
+            if (length(row) < 50 || length(col) < 50) %파랑이 없는 경우 종료
+                moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+                disp('if (length(row) < 50 || length(col) < 50)');
+                break;
+            end
+
+            % 빨강 표식 크기로 종료지점 확인 파랑 안찬경우
+            image=snapshot(cameraObj);
+            imageHSV=rgb2hsv(image);
+            image1H = imageHSV(:,:,1);
+            image1S = imageHSV(:,:,2);
+            image1V = imageHSV(:,:,3);
+            imageR_H = image1H <= 0.06 | image1H >= 0.94;
+            imageR_S = image1S >= 0.5 & image1S <= 1.0;
+            imageR_V = image1V >= 0.1 & image1V <= 0.9;
+            imageR_combi = imageR_H & imageR_S & imageR_V;
+            imshow(imageR_combi);
+            [rowR, colR]=find(imageR_combi);
+            length(rowR)
+            if length(rowR) > 3000
+                disp('length(rowR) > 3000 stage3')
+                break;
+            end
+        end
+        %%
+        land(droneobj);
+        break;
+        %% 파랑이 존재하지 않는다면 올라가자  안보일 때 올라가도 파랑이 안보이는 경우는 생기지 않음(아직까진)
+    elseif (length(row_origin) < 50 || length(col_origin) < 50)
+        disp('up');
+        moveup(droneobj,'WaitUntilDone',true);
+
+        %% 파랑이 꽉찬다면
+    elseif   (length(row) > 640000 && length(col) > 640000)% || reverseOn==1
+        reverseOn=1;
+        bw=~bw_origin;
+
+        bw = imerode(bw,se);
+        %         bw = imdilate(bw,se);
+
+        [row, col] = find(bw);
+
+        rf=mean(row);
+        cf=mean(col);
+        viscircles([cf rf],3);
+
+        error_r=rf-360;
+        error_c=cf-480;
+        %%
+        if abs(error_r)>margin2_full_ud  %위아래 판단, 에러가 특정 margin 밖에 있고, Col을 맞출 때
+            if error_r>0
+                disp('down full');
+                movedown(droneobj,'WaitUntilDone',true);
+            else
+                disp('up full');
+                moveup(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop up down full');
+            UDIn_full=UDIn_full+1;
+        end
+        %%
+        if abs(error_c)>margin2_full  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때
+            if error_c>0
+                disp('right full');
+                moveright(droneobj,'WaitUntilDone',true);
+            else
+                disp('left full');
+                moveleft(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop right left full');
+            RLIn_full=RLIn_full+1;
+        end
+
+        %% 파랑생이 꽉 찼을 때 안정적으로 중심을 찾기 위해
+        % 양옆 혹은 위아래 하나만 중심을 찾았을 때
+        if RLIn_full~=UDIn_full
+            center_reset=1;
+        end
+
+        if center_reset==1
+            UDIn_full=0;
+            RLIn_full=0;
+            center_reset=0;
+        end
+
+        if RLIn_full > 2 && UDIn_full > 2
+            fullgo=1;
+            disp('fullgo=1');
+        end
+        %% 파랑이 꽉 차지 않았을 때 파랑이 보이고 상하좌우 움직일 방향 결정
+    else%if reverseOn==0
+        %% 만약 이전 파랑영역보다 현재 파랑영역이 줄어들었으면 앞으로 이동 경연때도 필요한지는 모름
+%         if blue_pre > length(col_origin)+decrese_margin
+%             moveforward(droneobj,'WaitUntilDone',true);
+%             disp('blue is decrese');
+%         end
+
+        blue_pre=length(col_origin);
+
+        reverseOn=0;
+        [row, col] = find(bw);
+        rf=mean(row);
+        cf=mean(col);
+        viscircles([cf rf],3);
+
+        error_r=rf-360;
+        error_c=cf-480;
+
+        if abs(error_r)>margin2_notfull %위아래 판단, 에러가 특정 margin 밖에 있을 때
+            if error_r>0
+                disp('down');
+                movedown(droneobj,'WaitUntilDone',true);
+            else
+                disp('up');
+                moveup(droneobj,'WaitUntilDone',true);
+            end
+        else
+            disp('stop up down');
+            UDIn_notfull=UDIn_notfull+1;
+        end
+
+        if abs(error_c)>margin2_notfull %양옆 판단, 에러가 특정 margin 밖에 있을 때
+            if error_c>0
+                disp('right');
+                moveright(droneobj,'WaitUntilDone',true);
+
+            else
+                disp('left');
+                moveleft(droneobj,'WaitUntilDone',true);
+
+            end
+        else
+            disp('stop right left');
+            RLIn_notfull=RLIn_notfull+1;
+
+        end
+
+        %% 파랑생이 꽉 안찼을 때 안정적으로 중심을 찾기 위해
+        % 양옆 혹은 위아래 하나만 중심을 찾았을 때
+        if RLIn_notfull~=UDIn_notfull
+            center_reset=1;
+        end
+
+        if center_reset==1
+            UDIn_notfull=0;
+            RLIn_notfull=0;
+            center_reset=0;
+        end
+
+        if RLIn_notfull > 2 && UDIn_notfull > 2
+            notfullgo=1;
+            disp('notfullgo');
+            notfullbw=bw;
+        end
+
+    end
+
+    imshow(bw);
+
+end
