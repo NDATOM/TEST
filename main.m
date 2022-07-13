@@ -27,7 +27,7 @@ correcting_yaw = 0;
 Center_restart = 0;
 blueOn=0;
 takeoff(droneobj);
-% pause(0.5);
+%% pause(0.5);
 %% 원하는 높이만큼 띄우는 코드
 % dist=readHeight(droneobj); %0.2가 가장 극단적 %1.7
 % disp(dist);
