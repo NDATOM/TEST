@@ -40,16 +40,6 @@
 드론 이륙 후,
 ```matlab
          image=snapshot(cameraObj);
-%     imshow(image);
-%     imageHSV=rgb2hsv(image);
-%     image1H = imageHSV(:,:,1);
-%     image1S = imageHSV(:,:,2);
-%     image1V = imageHSV(:,:,3);
-% 
-     imageR_H = image1H <= 0.01 | image1H >= 0.97;
-%     imageR_S = image1S >= 0.95 & image1S <= 1.0;
-%     imageR_V = image1V >= 0.38 & image1V <= 0.41;
-%     imageR_combi = imageR_H & imageR_S & imageR_V;
 
     image1R = image(:,:,1);
     image1G = image(:,:,2);
@@ -61,20 +51,35 @@
     image_only_B=image1B-image1R/2-image1G/2;
     bw2 = image_only_B > 55;
     [row2, col2] = find(bw2);
-
-    imshow(bw2);
+    
+    bw_RB=bw2 | bw;
+    imshow(bw_RB);
     stats = regionprops(bw);
     centerIdx=1;
     redOn=0;
     red_close=0;
     disp('length(row2) = ');
     disp(length(row2));
+    if( length(row2) > 0)
+        blueOn=1;
      
 ```
 빨간색의 h, s, v 값, regionprops로 빨간색 표식의 속성을 찾는다.
      
 ```matlab
      
+if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파랑이 없고 빨강도 없는 경우 앞으로 조금 가고 종료
+        stage=2;
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.7);
+        disp('if (length(row) < 50 || length(col) < 50) stage1 end');
+        stage1image=bw;
+        turn(droneobj, deg2rad(90));
+        pause(0.5);
+        moveforward(droneobj,'WaitUntilDone',true,'distance',1);
+        break;
+
+    end
+
     if(~isempty(stats))
         for i = 1:numel(stats)
         
@@ -84,7 +89,7 @@
                 stage1image=bw;
                 turn(droneobj, deg2rad(90));
                 pause(0.5);
-                moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+                moveforward(droneobj,'WaitUntilDone',true,'distance',1);
 %                 moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
                 stage = 2;
                 break;
@@ -103,6 +108,9 @@
         end
 
         redOn=1;
+    else
+        redOn=0;
+        red_close=0;
     end
 
     if red_close==1 && stage==1
@@ -112,15 +120,13 @@
         moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
         disp("moveforward 1");
     end
-
-end
 ```
 드론이 보는 표식의 크기에 따라 가까운지 먼지 판단하고, moveforward로 지정된 시간 동안 지정된 추가 옵션에 따라 직진하게 한다.
 
 # 2단계 알고리즘 및 소스코드 설명
 5가지 경우를 반복한다. 
 
-### 첫 번째: 화면에 링의 파란 부분이 꽉 찼을 때 중앙점을 찾고 통과
+### 첫 번째: 링과 드론이 가까워서 링의 파란 부분이 화면에 꽉 찰 때
 - 원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
 
 <br>
@@ -194,120 +200,39 @@ mean 함수로 중심값을 찾는다.
 중심으로 이동하는 알고리즘은 다음과 같다.
 
 ```matlab
-     error_r=rf-360;
-            error_c=cf-480;
-            
-            down1=bw;
-            
-            disp(error_r);
-
-            
-            if abs(error_r)<100 || downCount==2 % 1m 에서 -30
-                disp('if abs(error_r)<100');
-                break;
-            end
-            downCount=downCount+1;
-            movedown(droneobj,'WaitUntilDone',true);
-        end
-        goCount=0;
-        while 1
-            goCount=goCount+1;
-            if goCount<2 % 한번 하강
-                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
-            else
-                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',0.8);
-            end
-
-             bw=~bw_origin; % 원형만 남게 
-        
-            bw = imerode(bw,se);
-    
-            [row, col] = find(bw);
-        
-            rf=mean(row);
-            cf=mean(col);
-            viscircles([cf rf],3);
-   
-            error_c=cf-480; 
+      error_c=cf-targetcenter_full(1); 
              
-            if abs(error_c)>margin2_full+10 %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
+            if abs(error_c)>margin2_full %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
                 if error_c>0
-                    disp('right go');
+                    disp('right go convergence');
                     moveright(droneobj,'WaitUntilDone',true,'Distance',0.2);
                 else
-                    disp('left go');
+                    disp('left go convergence');
                     moveleft(droneobj,'WaitUntilDone',true,'Distance',0.2);
                 end
             end
 ```
-찾은 중심값과 드론 전체화면의 중심과 비교하여 이동 <br>
-이때, 드론의 최소 이동거리 20cm 문제로 중심점을 정확하게 맞추는 것이 어려우므로 margin값  
+targetcenter_full은 [480 240]으로 정의되어 있다. <br>
+찾은 중심값과 드론 전체화면의 중심과 비교하여 이동한다. <br>
+이때, 드론의 최소 이동거리 20cm 문제로 중심점을 정확하게 맞추는 것이 어려우므로 margin값을 사용한다.
 
 
 ```matlab
      if (length(row) < 50 || length(col) < 50)
 ```
-중심을 찾았다면, 전진 후 빨간색 표식의 크기로 종료 지점을 확인
+중심을 찾았다면, 전진 후 빨간색 표식의 크기로 종료 지점을 확인하고 3단계로 넘어간다.
      
      
-### 두 번째: 화면에 링의 파란 부분이 꽉 차지 않았을 때 중앙점을 찾고 통과
-- 원과 원의 중심을 검출해내고, 원의 중심과의 차이에 따라 중심으로 이동
 
-첫 번째 경우와 다른 부분은 전진하는 코드가 있다는 것이다.
+??이때, 안정적으로 중심을 찾기 위해 UDIn_full과 UDIn_full으로 양옆 혹은 위아래 중 하나만 중심을 찾는 것이 아닌, 양옆과 위아래 모두 중심을 찾을 수 있도록 하였다.??
+
+
      
-### 세 번째: 화면에 링의 파란 부분이 꽉 찼을 때 통과
+### 두 번째: 링과 드론이 멀어서 링의 파란 부분이 화면에 꽉 차지 않을 때
 
-이때, 안정적으로 중심을 찾기 위한 알고리즘을 만들었다.
-
-```matlab
- if abs(error_r)>margin2_full_ud  %위아래 판단, 에러가 특정 margin 밖에 있고, Col을 맞출 때
-            if error_r>0
-                disp('down full');
-               movedown(droneobj,'WaitUntilDone',true);
-            else
-                disp('up full');
-              moveup(droneobj,'WaitUntilDone',true);
-            end
-        else
-            disp('stop up down full');
-            UDIn_full=UDIn_full+1;
-        end
-%%
-        if abs(error_c)>margin2_full  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때
-            if error_c>0
-                disp('right full');
-                moveright(droneobj,'WaitUntilDone',true);
-            else
-                disp('left full');
-                moveleft(droneobj,'WaitUntilDone',true);
-            end
-        else
-            disp('stop right left full');
-            RLIn_full=RLIn_full+1;
-        end
-% 양옆 혹은 위아래 하나만 중심을 찾았을 때
-        if RLIn_full~=UDIn_full
-            center_reset=1;
-        end
-        
-        if center_reset==1
-            UDIn_full=0;
-            RLIn_full=0;
-            center_reset=0;
-        end
-        
-        if RLIn_full > 2 && UDIn_full > 2 
-            fullgo=1;
-            disp('fullgo=1');
-        end
-```
+드론을 전진시켜 링과 드론이 가깝게(파란 부분이 화면에 꽉 차게) 만든 뒤, 첫 번째 경우의 알고리즘으로 통과한다. 
      
-     
-### 네 번째: 화면에 링의 파란 부분이 꽉 차지 않았을 때 통과
-
-
-
-### 다섯 번째: 예외 상황
+### 세 번째: 예외 상황
 파랑색이 존재하지 않는다면 상승
      
 
@@ -358,25 +283,44 @@ mean 함수로 중심값을 찾는다.
         disp('correcting_cf');
         disp(correcting_cf);
 
-        if correcting_cf > 0
-            disp("turn left");
+        if correcting_cf > 5
+            disp("turn left 10");
 
             turn(droneobj, deg2rad(-10));
             disp(correcting_cf);
 
             Center_restart = 1;
 
-        
-        elseif correcting_cf < 0
+        elseif correcting_cf > 2
+            disp("turn right");
+
+            turn(droneobj, deg2rad(-5));
+            disp(correcting_cf);
+
+            Center_restart = 1;
+            
+        elseif correcting_cf < -5
             disp("turn right");
 
             turn(droneobj, deg2rad(10));
             disp(correcting_cf);
 
             Center_restart = 1;
+
+        elseif correcting_cf < -2
+            disp("turn right");
+
+            turn(droneobj, deg2rad(5));
+            disp(correcting_cf);
+
+            Center_restart = 1;
+
         else
+            disp("correcting yaw")
             Center_restart = 1;
         end
+
+    end
 ```
      
 : 화면에 보이는 파란 부분의 무게중심을 찾고, 무게중심과 중앙점이 어떻게 위치해있는지에 따라 각도 조절
