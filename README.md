@@ -38,15 +38,21 @@
 
 # 1단계 알고리즘 및 소스코드 설명
 드론 이륙 후,
-```matlab
-         image=snapshot(cameraObj);
+```matlab                                                  
+    image=snapshot(cameraObj);
+    imageHSV=rgb2hsv(image);
+    image1H = imageHSV(:,:,1);
+    image1S = imageHSV(:,:,2);
+    image1V = imageHSV(:,:,3);
+
+    imageR_H = image1H <= 0.01 | image1H >= 0.97;
+    imageR_S = image1S >= 0.95 & image1S <= 1.0;
+    imageR_V = image1V >= 0.38 & image1V <= 0.41;
+    imageR_combi = imageR_H & imageR_S & imageR_V;
 
     image1R = image(:,:,1);
     image1G = image(:,:,2);
     image1B = image(:,:,3);
-
-    image_only_R=image1R-image1G/2-image1B/2;
-    bw = image_only_R > 55;
     
     image_only_B=image1B-image1R/2-image1G/2;
     bw2 = image_only_B > 55;
@@ -64,21 +70,9 @@
         blueOn=1;
      
 ```
-빨간색의 h, s, v 값, regionprops로 빨간색 표식의 속성을 찾는다.
-     
+빨간색의 h, s, v 값을 통해서 빨간색만을 검출하고 R, G, B의 값을 조절하여 크로마키 천의 파란색을 검출한다. regionprops로 빨간색 표식의 속성을 찾는다.
 ```matlab
-if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파랑이 없고 빨강도 없는 경우 앞으로 조금 가고 종료
-        stage=2;
-        moveforward(droneobj,'WaitUntilDone',true,'distance',0.7);
-        disp('if (length(row) < 50 || length(col) < 50) stage1 end');
-        stage1image=bw;
-        turn(droneobj, deg2rad(90));
-        pause(0.5);
-        moveforward(droneobj,'WaitUntilDone',true,'distance',1);
-        break;
-    end
-
-    if(~isempty(stats))
+         if(~isempty(stats))
         centerIdx=1;
         for i = 1:numel(stats)
             if stats(i).Area>stats(centerIdx).Area
@@ -93,6 +87,7 @@ if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파�
             turn(droneobj, deg2rad(90));
             pause(0.5);
             moveforward(droneobj,'WaitUntilDone',true,'distance',1);
+%                 moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
             stage = 2;
             break;
         end
@@ -122,12 +117,24 @@ if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파�
         moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
         disp("moveforward 1");
     end
-
-end
+'''
+     빨강색 표식을 검출하고 반복문을 사용하여 원하는 표식만 남긴다. 표식의 면적이 3000을 초과하면 stage2로 넘어간다. 표식의 면적이 1000을 초과하면 앞으로 천천히 가면서 표식을 검출한다. 
+     
+```matlab
+if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파랑이 없고 빨강도 없는 경우 앞으로 70cm가고 90도 오른쪽으로 회전 후 앞으로 1m 전진 후 stage 2로 넘어간다.
+        stage=2;
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.7);
+        disp('if (length(row) < 50 || length(col) < 50) stage1 end');
+        stage1image=bw;
+        turn(droneobj, deg2rad(90));
+        pause(0.5);
+        moveforward(droneobj,'WaitUntilDone',true,'distance',1);
+        break;
+    end
 
 reverseOn=0;
 ```
-드론이 보는 표식의 크기에 따라 가까운지 먼지 판단하고, moveforward로 지정된 시간 동안 지정된 추가 옵션에 따라 직진하게 한다.
+드론이 보는 표식의 크기에 따라 가까운지 먼지 판단하고, 표식이 없고 크로마키 천을 통과했을 경우 1m 직진 후 stage2로 넘어간다.
  
 <br>
 
@@ -135,10 +142,10 @@ reverseOn=0;
 3가지 경우를 반복한다. 
 
 ### 첫 번째: 링과 드론이 가까워서 링의 파란 부분이 화면에 꽉 찰 때
-* 원의 중심과 링 배경 크로마키 천의 중심이 동일하다는 아이디어를 이용하여 중심을 찾는다.
+* 원의 중심과 드론의 중심을 비교는 아이디어를 이용하여 중심을 찾는다.
 <br>
 
-링 배경 크로마키 을 검출하는 알고리즘은 다음과 같다.
+링 배경 크로마키를 검출하는 알고리즘은 다음과 같다.
 
 ```matlab
     image=snapshot(cameraObj);
@@ -180,7 +187,7 @@ BOX 안을 모두 흰색(1)으로 만든다.<br>
 
 <br>
 중심을 찾는 알고리즘은 다음과 같다.
-크로마키 천을 1, 링의 원 뒤로 보이는 배경을 0으로 하였을 때 1 값이 있는 좌표들의 평균점이 크로마키 천의 중심이다.
+크로마키 천을 1, 배경을 0으로 하였을 때 1 값이 있는 좌표들의 평균점이 크로마키 천의 중심이다.
 
 ```matlab
             image=snapshot(cameraObj);
@@ -204,8 +211,8 @@ BOX 안을 모두 흰색(1)으로 만든다.<br>
 반전시킨 뒤, imerode 함수로 원의 노이즈를 제거 <br>
 반전시키는 이유는, 크로마키 천(1)이 드론과 가까워서 평균값을 찾는 것이 불가능할 때 원의 중심을 찾기 위함이다.
 imerode로 침식시킨 것은, 모폴로지 연산 중에 close 연산을 구현하여 배경을 '0'으로 만들기 위함이다.
-mean 함수로 중심값을 찾는다.
-
+같은 방식으로 원의 중심을 찾는다.
+     
 <br>
 중심으로 이동하는 알고리즘은 다음과 같다.
 
@@ -224,12 +231,12 @@ mean 함수로 중심값을 찾는다.
 ```
 targetcenter_full은 [480 240]으로 정의되어 있다. <br>
 찾은 중심값과 드론 전체화면의 중심과 비교하여 이동한다. <br>
-이때, 드론의 최소 이동거리 20cm 문제로 중심점을 정확하게 맞추는 것이 어려우므로 margin값을 사용한다.
+이때, 드론의 최소 이동거리 20cm 문제로 중심점을 정확하게 맞추는 것이 어려우므로 margin값을 사용하여 드론이 원의 중심을 찾는 범위를 넓혀 원의 중심을 반복하여 벗어나는 오류를 방지한다.
 
 
 
 이때, 안정적으로 중심을 찾는 알고리즘을 적용한다.
-즉, 양옆 혹은 위아래 중 하나만 중심을 찾는 것이 아닌, 양옆과 위아래 모두 중심을 찾을 수 있도록 한다.
+즉, 양옆 혹은 위아래 중 하나만 중심을 찾는 것이 아닌, 양옆과 위아래 모두 동시에 중심을 찾을 수 있도록 한다.
 ```matlab
 %%
         if abs(error_r)>margin2_full_ud  %위아래 판단, 에러가 특정 margin 밖에 있고, Col을 맞출 때
@@ -282,20 +289,20 @@ targetcenter_full은 [480 240]으로 정의되어 있다. <br>
 if (length(row) < 50 || length(col) < 50)
 
 ```
-중심을 찾았다면, 전진 후 빨간색 표식의 크기로 종료 지점을 확인하고 3단계로 넘어간다.
+중심을 찾았다면, 전진 후 표식의 크기로 종료 지점을 확인하고 3단계로 넘어간다.
 
 
 
 ### 두 번째: 링과 드론이 멀어서 링의 파란 부분이 화면에 꽉 차지 않을 때
 
-중심을 찾고, 드론을 전진시켜 링과 드론이 가깝게(파란 부분이 화면에 꽉 차게) 만든 뒤, 첫 번째 경우의 알고리즘으로 통과한다. 
+중심을 찾고, 드론을 전진시켜 링과 드론이 가깝게(파란 부분이 화면에 꽉 차게) 만든 뒤, 원의 중심을 찾아 전진하는 알고리즘을 통해서 표식을 인식하고 stage3로 넘어간다.
      
      
 ## 3단계
 * 90도 회전, 전진, 45도 회전한다.<br>
-* 2단계 알고리즘을 이용해 중앙점을 찾는다. <br>
-* 찾은 뒤 Yow(각도)를 조절한다. <br>
-
+* 크로마키천의 중심으로 이동한다. <br>
+* Yaw(각도)를 조절한다. <br>
+* stage2의 알고리즘을 사용하여 3단계 표식을 인식후 착지한다. <br>
 각도 조절 알고리즘은 다음과 같다.
 ```matlab
      image = snapshot(cameraObj);
@@ -378,9 +385,9 @@ if (length(row) < 50 || length(col) < 50)
 
     end
 ```
-     
-화면에 보이는 파란 부분의 무게중심을 찾는다. <br>
-무게중심과 중앙점이 어떻게 위치해있는지에 따라 각도를 조절한다. <br>
+크로마키 천에 bounding box를 검출하고 속을 1로 채운 직사각형의 중심을 찾는다.<br>
+크로마키 천의 구멍을 imfill 함수를 사용하여 1로 채운 사다리꼴의 중심을 찾는다.<br>
+직사각형의 중심을 기준으로 두 중심을 비교하여 드론이 변경해야하는 각도를 판단한다.<br>
 
 * 다시 2단계 알고리즘으로 중앙점 찾고 통과한다.
 
