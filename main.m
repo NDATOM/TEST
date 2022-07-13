@@ -13,7 +13,7 @@ UDIn_notfull=0;
 RLIn_full=0;
 UDIn_full=0;
 center_reset=0;
-% figure();hold on;
+figure();hold on;
 margin2_notfull=40; % 마진 범위를 50으로 늘려서 right left 반복 문제를 해결
 margin2_full=60;
 margin2_full_ud=70;
@@ -26,7 +26,12 @@ downCount=0;
 correcting_yaw = 0;
 Center_restart = 0;
 blueOn=0;
+moveDownOn=0;
+moveUpOn=0;
+moveRightOn=0;
+moveLeftOn=0;
 takeoff(droneobj);
+
 %% pause(0.5);
 %% 원하는 높이만큼 띄우는 코드
 % dist=readHeight(droneobj); %0.2가 가장 극단적 %1.7
@@ -40,6 +45,7 @@ takeoff(droneobj);
 % end
 
 moveup(droneobj,'Distance',0.2,'WaitUntilDone',true);
+
 %%
 
 while(stage == 1)
@@ -67,84 +73,42 @@ while(stage == 1)
     [row2, col2] = find(bw2);
     
     bw_RB=bw2 | bw;
-    %imshow(bw_RB);
+    imshow(bw_RB);
     stats = regionprops(bw);
     centerIdx=1;
     redOn=0;
     red_close=0;
     disp('length(row2) = ');
     disp(length(row2));
-    if( length(row2) > 0)
+    
+    if (length(row2) > 50 ||  length(col2) > 50)
+        blueOn=1;
+    end
+    
+    if blueOn==0
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
         blueOn=1;
     end
 
-    if (length(row2) < 50 ||  length(col2) < 50) && red_close==0 && blueOn==1 %파랑이 없고 빨강도 없는 경우 앞으로 조금 가고 종료
+    if (length(row2) < 50 ||  length(col2) < 50) %파랑이 없고
         stage=2;
         moveforward(droneobj,'WaitUntilDone',true,'distance',0.7);
         disp('if (length(row) < 50 || length(col) < 50) stage1 end');
         stage1image=bw;
         turn(droneobj, deg2rad(90));
         pause(0.5);
-        moveforward(droneobj,'WaitUntilDone',true,'distance',1);
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.8);
         break;
-%     elseif length(row2) > 50 && length(row2) < 150000
-%         moveforward(droneobj,1,'WaitUntilDone',true,'Speed',0.8);
-%         disp('movefast');
-%     else
-%         moveforward(droneobj,1,'WaitUntilDone',true,'Speed',0.5);
-%         disp('moveslow');
-    end
-
-
-
-    if(~isempty(stats))
-        centerIdx=1;
-        for i = 1:numel(stats)
-            if stats(i).Area>stats(centerIdx).Area
-                centerIdx=i;
-            end
-        end
-        
-        if stats(centerIdx).Area > 3000
-            disp("stage = 2");
-            pause(1);
-            stage1image=bw;
-            turn(droneobj, deg2rad(90));
-            pause(0.5);
-            moveforward(droneobj,'WaitUntilDone',true,'distance',1);
-%                 moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
-            stage = 2;
-            break;
-        end
-
-        if stats(centerIdx).Area > 1000
-            red_close=1;
-        end
-        
-        if red_close==1
-            moveforward(droneobj,'WaitUntilDone',true,'distance',0.3);
-            disp("moveforward 0.4 slow");
-        else
-            moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
-            disp("moveforward 0.4 fast");
-        end
-
-        redOn=1;
+    elseif length(row2) > 50 && length(row2) < 150000
+        moveforward(droneobj,1,'WaitUntilDone',true,'Speed',0.8);
+        disp('movefast');
     else
-        redOn=0;
-        red_close=0;
-    end
-
-    if red_close==1 && stage==1
-        moveforward(droneobj,'WaitUntilDone',true,'distance',0.2);
-        disp("moveforward 0.4 slow not box");
-    elseif redOn==0 && stage==1
-        moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
-        disp("moveforward 1");
+        moveforward(droneobj,1,'WaitUntilDone',true,'Speed',0.5);
+        disp('moveslow');
     end
 
 end
-
+moveup(droneobj,'Distance',0.7,'WaitUntilDone',true);
 reverseOn=0;
 %% stage2
 while(stage == 2)
@@ -170,8 +134,8 @@ while(stage == 2)
                 centerIdx=i;
             end
         end
-        %rectangle('Position', stats(centerIdx).BoundingBox, ...
-            %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+        rectangle('Position', stats(centerIdx).BoundingBox, ...
+            'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
 
         stat_int=uint16(stats(centerIdx).BoundingBox);
         bw(stat_int(2):stat_int(2)+stat_int(4),stat_int(1):stat_int(1)+stat_int(3))=1;
@@ -203,7 +167,7 @@ while(stage == 2)
         
             rf=mean(row);
             cf=mean(col);
-            %viscircles([cf rf],3);
+            viscircles([cf rf],3);
    
             error_c=cf-targetcenter_full(1); 
              
@@ -227,26 +191,8 @@ while(stage == 2)
             [row, col] = find(bw);
             if (length(row) < 50 || length(col) < 50)  %중심 찾은 경우
                 stage=3;
-                moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+                moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
                 disp('if (length(row) < 50 || length(col) < 50)');
-                break;
-            end
-
-            % 빨강 표식 크기로 종료지점 확인 파랑이 꽉찬경우
-            image=snapshot(cameraObj);
-            imageHSV=rgb2hsv(image);
-            image1H = imageHSV(:,:,1);
-            image1S = imageHSV(:,:,2);
-            image1V = imageHSV(:,:,3);
-            imageG_H = image1H >= 0.29 & image1H <= 0.31;
-            imageG_S = image1S >= 0.5 & image1S <= 0.6;
-            imageG_V = image1V >= 0.4 & image1V <= 0.5;
-            imageG_combi = imageG_H & imageG_S & imageG_V;
-            %imshow(imageG_combi);
-            [rowG, colG]=find(imageG_combi);
-            if length(rowG) > 3000 %임의의 값 
-                stage=3;
-                disp('if length(rowR) > 3000');
                 break;
             end
 
@@ -274,7 +220,7 @@ while(stage == 2)
             image_only_B=image1B-image1R/2-image1G/2;
             bw = image_only_B > 55;
             bw_origin=bw;
-            %imshow(bw);
+            imshow(bw);
             stats = regionprops(bw);   
             centerIdx=1;
             
@@ -298,17 +244,17 @@ while(stage == 2)
             
             error_c=cf-targetcenter_notfull(1);
             
-            if abs(error_c)>margin2_notfull %양옆 판단, 에러가 특정 margin 밖에 있을 때
-                if error_c>0
-                    disp('right');
-                    moveright(droneobj,'WaitUntilDone',true);
-    
-                else
-                    disp('left');
-                    moveleft(droneobj,'WaitUntilDone',true);
-    
-                end
-            end
+%             if abs(error_c)>margin2_notfull %양옆 판단, 에러가 특정 margin 밖에 있을 때
+%                 if error_c>0
+%                     disp('right');
+%                     moveright(droneobj,'WaitUntilDone',true);
+%     
+%                 else
+%                     disp('left');
+%                     moveleft(droneobj,'WaitUntilDone',true);
+%     
+%                 end
+%             end
 
             [row_origin, col_origin] = find(bw_origin);
         
@@ -321,7 +267,7 @@ while(stage == 2)
                 fullgo=1;
                 break;
             else
-                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.3);
+                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.8);
             end
 
         end
@@ -412,10 +358,12 @@ while(stage == 2)
         if abs(error_r)>margin2_notfull %위아래 판단, 에러가 특정 margin 밖에 있을 때
             if error_r>0
                 disp('down');
-                movedown(droneobj,'WaitUntilDone',true);
+                moveDownOn=1;
+%                 movedown(droneobj,'WaitUntilDone',true);
             else
                 disp('up');
-                moveup(droneobj,'WaitUntilDone',true);
+                moveUpOn=1;
+%                 moveup(droneobj,'WaitUntilDone',true);
             end
         else
             disp('stop up down');
@@ -425,17 +373,58 @@ while(stage == 2)
         if abs(error_c)>margin2_notfull %양옆 판단, 에러가 특정 margin 밖에 있을 때
             if error_c>0
                 disp('right');
-                moveright(droneobj,'WaitUntilDone',true);
+                moveRightOn=1;
+%                 moveright(droneobj,'WaitUntilDone',true);
 
             else
                 disp('left');
-                moveleft(droneobj,'WaitUntilDone',true);
+                moveLeftOn=1;
+%                 moveleft(droneobj,'WaitUntilDone',true);
 
             end
         else
             disp('stop right left');
             RLIn_notfull=RLIn_notfull+1;
             
+        end
+
+        if RLIn_notfull==0 || UDIn_notfull==0 || RLIn_notfull~=UDIn_notfull
+            if moveUpOn==1 
+                if moveRightOn==1
+                    move(droneobj, [0 0.2 -0.2],"WaitUntilDone",true,"Speed",0.1);
+                    disp('move(droneobj, [0 0.2 -0.2],"Speed",0.1);');
+                elseif moveLeftOn==1
+                    move(droneobj, [0 -0.2 -0.2],"WaitUntilDone",true,"Speed",0.1);
+                     disp('move(droneobj,[0 -0.2 -0.2],"Speed",0.1);');
+                else
+                    move(droneobj, [0 0 -0.2],"WaitUntilDone",true,"Speed",0.1);
+                    disp('move(droneobj,[0 0 -0.2],"Speed",0.1);');
+                end
+
+            elseif moveDownOn==1
+                if moveRightOn==1
+                    move(droneobj, [0 0.2 0.2],"WaitUntilDone",true,"Speed",0.1);
+                     disp('move(droneobj, [0 0.2 0.2],"Speed",0.1);');
+                elseif moveLeftOn==1
+                    move(droneobj, [0 -0.2 0.2],"WaitUntilDone",true,"Speed",0.1);  
+                     disp('move(droneobj, [0 -0.2 0.2],"Speed",0.1);');
+                 else
+                    move(droneobj, [0 0 0.2],"WaitUntilDone",true,"Speed",0.1);
+                    disp('move(droneobj,[0 0 0.2],"Speed",0.1);');
+                end 
+            elseif moveDownOn==0 && moveUpOn==0
+                if moveRightOn==1
+                    move(droneobj, [0 0.2 0],"WaitUntilDone",true,"Speed",0.1);
+                     disp('move(droneobj, [0 0.2 0],"Speed",0.1);');
+                elseif moveLeftOn==1
+                    move(droneobj, [0 -0.2 0],"WaitUntilDone",true,'Speed',0.1);
+                     disp('move(droneobj, [0 -0.2 0],"Speed",0.1);');
+                end
+            end
+            moveDownOn=0;
+            moveUpOn=0;
+            moveRightOn=0;
+            moveLeftOn=0;
         end
         
 %% 파랑생이 꽉 안찼을 때 안정적으로 중심을 찾기 위해
@@ -458,7 +447,7 @@ while(stage == 2)
         
     end
 
-    %imshow(bw);
+    imshow(bw);
 
 end
 
@@ -470,11 +459,10 @@ end
 
 
 turn(droneobj, deg2rad(90));
-moveforward(droneobj,0.8,"Speed",1);
-moveforward(droneobj,0.4,"Speed",1);
+moveforward(droneobj,1,"Speed",1);
 
 turn(droneobj,deg2rad(45));
-
+moveup(droneobj,'Distance',0.5,'WaitUntilDone',true);
 
 
 disp("stage 3 in");
@@ -588,7 +576,7 @@ while(stage == 3)
         [row, col] = find(bw);
         rf=mean(row);
         cf=mean(col);
-        %viscircles([cf rf],3);
+        viscircles([cf rf],3);
 
         error_r=rf-targetcenter_notfull(2);
         error_c=cf-targetcenter_notfull(1);
@@ -596,10 +584,12 @@ while(stage == 3)
         if abs(error_r)>margin2_notfull %위아래 판단, 에러가 특정 margin 밖에 있을 때
             if error_r>0
                 disp('down');
-                movedown(droneobj,'WaitUntilDone',true);
+%                 movedown(droneobj,'WaitUntilDone',true);
+                moveDownOn=1;
             else
                 disp('up');
-                moveup(droneobj,'WaitUntilDone',true);
+%                 moveup(droneobj,'WaitUntilDone',true);
+                moveUpOn=1;
             end
         else
             disp('stop up down');
@@ -609,17 +599,56 @@ while(stage == 3)
         if abs(error_c)>margin2_notfull %양옆 판단, 에러가 특정 margin 밖에 있을 때
             if error_c>0
                 disp('right');
-                moveright(droneobj,'WaitUntilDone',true);
-
+%                 moveright(droneobj,'WaitUntilDone',true);
+                moveRightOn=1;
             else
                 disp('left');
-                moveleft(droneobj,'WaitUntilDone',true);
-
+%                 moveleft(droneobj,'WaitUntilDone',true);
+                moveLeftOn=1;
             end
         else
             disp('stop right left');
             RLIn_notfull=RLIn_notfull+1;
+            
+        end
 
+        if RLIn_notfull==0 || UDIn_notfull==0 || RLIn_notfull~=UDIn_notfull
+            if moveUpOn==1 
+                if moveRightOn==1
+                    move(droneobj, [0 0.2 -0.2],"WaitUntilDone",true,"Speed",0.1);
+                    disp('move(droneobj, [0 0.2 -0.2],"Speed",0.1);');
+                elseif moveLeftOn==1
+                    move(droneobj, [0 -0.2 -0.2],"WaitUntilDone",true,"Speed",0.1);
+                     disp('move(droneobj,[0 -0.2 -0.2],"Speed",0.1);');
+                else
+                    move(droneobj, [0 0 -0.2],"WaitUntilDone",true,"Speed",0.1);
+                    disp('move(droneobj,[0 0 -0.2],"Speed",0.1);');
+                end
+
+            elseif moveDownOn==1
+                if moveRightOn==1
+                    move(droneobj, [0 0.2 0.2],"WaitUntilDone",true,"Speed",0.1);
+                     disp('move(droneobj, [0 0.2 0.2],"Speed",0.1);');
+                elseif moveLeftOn==1
+                    move(droneobj, [0 -0.2 0.2],"WaitUntilDone",true,"Speed",0.1);  
+                     disp('move(droneobj, [0 -0.2 0.2],"Speed",0.1);');
+                 else
+                    move(droneobj, [0 0 0.2],"WaitUntilDone",true,"Speed",0.1);
+                    disp('move(droneobj,[0 0 0.2],"Speed",0.1);');
+                end 
+            elseif moveDownOn==0 && moveUpOn==0
+                if moveRightOn==1
+                    move(droneobj, [0 0.2 0],"WaitUntilDone",true,"Speed",0.1);
+                     disp('move(droneobj, [0 0.2 0],"Speed",0.1);');
+                elseif moveLeftOn==1
+                    move(droneobj, [0 -0.2 0],"WaitUntilDone",true,'Speed',0.1);
+                     disp('move(droneobj, [0 -0.2 0],"Speed",0.1);');
+                end
+            end
+            moveDownOn=0;
+            moveUpOn=0;
+            moveRightOn=0;
+            moveLeftOn=0;
         end
 
         %% 파랑생이 꽉 안찼을 때 안정적으로 중심을 찾기 위해
@@ -643,7 +672,7 @@ while(stage == 3)
     
     end
 
-    %imshow(bw);
+    imshow(bw);
 end
 %% Yaw 조절
 if correcting_yaw == 1
@@ -667,8 +696,8 @@ if correcting_yaw == 1
                 centerIdx=i;
             end
         end
-        %rectangle('Position', stats(centerIdx).BoundingBox, ...
-            %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+        rectangle('Position', stats(centerIdx).BoundingBox, ...
+            'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
         hold on;
 
         stat_int=uint16(stats(centerIdx).BoundingBox);
@@ -756,8 +785,8 @@ while(Center_restart == 1)
                 centerIdx=i;
             end
         end
-        %rectangle('Position', stats(centerIdx).BoundingBox, ...
-            %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+        rectangle('Position', stats(centerIdx).BoundingBox, ...
+            'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
 
         stat_int=uint16(stats(centerIdx).BoundingBox);
         bw(stat_int(2):stat_int(2)+stat_int(4),stat_int(1):stat_int(1)+stat_int(3))=1;
@@ -791,7 +820,7 @@ while(Center_restart == 1)
 
             rf=mean(row);
             cf=mean(col);
-            %viscircles([cf rf],3);
+            viscircles([cf rf],3);
 
             error_c=cf-targetcenter_full(1);
 
@@ -821,21 +850,21 @@ while(Center_restart == 1)
             end
 
             % 빨강 표식 크기로 종료지점 확인 파랑이 꽉찬경우
-            image=snapshot(cameraObj);
-            imageHSV=rgb2hsv(image);
-            image1H = imageHSV(:,:,1);
-            image1S = imageHSV(:,:,2);
-            image1V = imageHSV(:,:,3);
-            imageR_H = image1H <= 0.06 | image1H >= 0.94;
-            imageR_S = image1S >= 0.5 & image1S <= 1.0;
-            imageR_V = image1V >= 0.1 & image1V <= 0.9;
-            imageR_combi = imageR_H & imageR_S & imageR_V;
-            %imshow(imageR_combi);
-            [rowR, colR]=find(imageR_combi);
-            if length(rowR) > 3000 %임의의 값
-                disp('if length(rowR) > 3000 stage=3');
-                break;
-            end
+%             image=snapshot(cameraObj);
+%             imageHSV=rgb2hsv(image);
+%             image1H = imageHSV(:,:,1);
+%             image1S = imageHSV(:,:,2);
+%             image1V = imageHSV(:,:,3);
+%             imageR_H = image1H <= 0.06 | image1H >= 0.94;
+%             imageR_S = image1S >= 0.5 & image1S <= 1.0;
+%             imageR_V = image1V >= 0.1 & image1V <= 0.9;
+%             imageR_combi = imageR_H & imageR_S & imageR_V;
+%             imshow(imageR_combi);
+%             [rowR, colR]=find(imageR_combi);
+%             if length(rowR) > 3000 %임의의 값
+%                 disp('if length(rowR) > 3000 stage=3');
+%                 break;
+%             end
 
         end
 
@@ -847,8 +876,7 @@ while(Center_restart == 1)
     elseif notfullgo==1 && fullgo==0
         %%  하강
         downCount=0;
-        movedown(droneobj,'WaitUntilDone',true);
-        movedown(droneobj,'WaitUntilDone',true);
+        movedown(droneobj,'WaitUntilDone',true,'Distance',0.3);
         disp('movedown twice stage3_2');
 
 
@@ -866,7 +894,7 @@ while(Center_restart == 1)
             image_only_B=image1B-image1R/2-image1G/2;
             bw = image_only_B > 55;
             bw_origin=bw;
-            %imshow(bw)
+            imshow(bw)
             stats = regionprops(bw);   
             centerIdx=1;
             
@@ -876,8 +904,8 @@ while(Center_restart == 1)
                     centerIdx=i;
                 end
             end
-            %rectangle('Position', stats(centerIdx).BoundingBox, ...
-                    %'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
+            rectangle('Position', stats(centerIdx).BoundingBox, ...
+                    'Linewidth', 3, 'EdgeColor', 'b', 'LineStyle', '--');
                 stat_int=uint16(stats(centerIdx).BoundingBox);
                 bw(stat_int(2):stat_int(2)+stat_int(4),stat_int(1):stat_int(1)+stat_int(3))=1;
             end
@@ -892,7 +920,7 @@ while(Center_restart == 1)
                    fullgo=1;
                    break;
             else
-                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.3);
+                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.7);
             end
 
 
@@ -901,21 +929,21 @@ while(Center_restart == 1)
         %% 파랑이 존재하지 않는다면 올라가자  안보일 때 올라가도 파랑이 안보이는 경우는 생기지 않음(아직까진)
     elseif (length(row_origin) < 50 || length(col_origin) < 50)
         disp('up stage=3 2');
-        moveup(droneobj,'WaitUntilDone',true);
-
+        moveup(droneobj,'WaitUntilDone',true,'Distance',0.4);
+zxs
         %% 파랑이 꽉찬다면
     elseif   (length(row) > 590000 && length(col) > 590000)% || reverseOn==1
         reverseOn=1;
         bw=~bw_origin;
 
         bw = imerode(bw,se);
-        %         bw = imdilate(bw,se);
+                bw = imdilate(bw,se);
 
         [row, col] = find(bw);
 
         rf=mean(row);
         cf=mean(col);
-        %viscircles([cf rf],3);
+        viscircles([cf rf],3);
 
         error_r=rf-targetcenter_full(2);
         error_c=cf-targetcenter_full(1);
@@ -976,7 +1004,7 @@ while(Center_restart == 1)
         [row, col] = find(bw);
         rf=mean(row);
         cf=mean(col);
-        %viscircles([cf rf],3);
+        viscircles([cf rf],3);
 
         error_r=rf-targetcenter_notfull(2);
         error_c=cf-targetcenter_notfull(1);
@@ -984,10 +1012,12 @@ while(Center_restart == 1)
         if abs(error_r)>margin2_notfull %위아래 판단, 에러가 특정 margin 밖에 있을 때
             if error_r>0
                 disp('down');
-                movedown(droneobj,'WaitUntilDone',true);
+%                 movedown(droneobj,'WaitUntilDone',true);
+                moveDownOn=1;
             else
                 disp('up');
-                moveup(droneobj,'WaitUntilDone',true);
+%                 moveup(droneobj,'WaitUntilDone',true);
+                moveUpOn=1;
             end
         else
             disp('stop up down');
@@ -997,17 +1027,56 @@ while(Center_restart == 1)
         if abs(error_c)>margin2_notfull %양옆 판단, 에러가 특정 margin 밖에 있을 때
             if error_c>0
                 disp('right');
-                moveright(droneobj,'WaitUntilDone',true);
-
+%                 moveright(droneobj,'WaitUntilDone',true);
+                moveRightOn=1;
             else
                 disp('left');
-                moveleft(droneobj,'WaitUntilDone',true);
-
+%                 moveleft(droneobj,'WaitUntilDone',true);
+                moveLeftOn=1;
             end
         else
             disp('stop right left');
             RLIn_notfull=RLIn_notfull+1;
+            
+        end
 
+        if RLIn_notfull==0 || UDIn_notfull==0 || RLIn_notfull~=UDIn_notfull
+            if moveUpOn==1 
+                if moveRightOn==1
+                    move(droneobj, [0 0.2 -0.2],"WaitUntilDone",true,"Speed",0.1);
+                    disp('move(droneobj, [0 0.2 -0.2],"Speed",0.1);');
+                elseif moveLeftOn==1
+                    move(droneobj, [0 -0.2 -0.2],"WaitUntilDone",true,"Speed",0.1);
+                     disp('move(droneobj,[0 -0.2 -0.2],"Speed",0.1);');
+                else
+                    move(droneobj, [0 0 -0.2],"WaitUntilDone",true,"Speed",0.1);
+                    disp('move(droneobj,[0 0 -0.2],"Speed",0.1);');
+                end
+
+            elseif moveDownOn==1
+                if moveRightOn==1
+                    move(droneobj, [0 0.2 0.2],"WaitUntilDone",true,"Speed",0.1);
+                     disp('move(droneobj, [0 0.2 0.2],"Speed",0.1);');
+                elseif moveLeftOn==1
+                    move(droneobj, [0 -0.2 0.2],"WaitUntilDone",true,"Speed",0.1);  
+                     disp('move(droneobj, [0 -0.2 0.2],"Speed",0.1);');
+                 else
+                    move(droneobj, [0 0 0.2],"WaitUntilDone",true,"Speed",0.1);
+                    disp('move(droneobj,[0 0 0.2],"Speed",0.1);');
+                end 
+            elseif moveDownOn==0 && moveUpOn==0
+                if moveRightOn==1
+                    move(droneobj, [0 0.2 0],"WaitUntilDone",true,"Speed",0.1);
+                     disp('move(droneobj, [0 0.2 0],"Speed",0.1);');
+                elseif moveLeftOn==1
+                    move(droneobj, [0 -0.2 0],"WaitUntilDone",true,'Speed',0.1);
+                     disp('move(droneobj, [0 -0.2 0],"Speed",0.1);');
+                end
+            end
+            moveDownOn=0;
+            moveUpOn=0;
+            moveRightOn=0;
+            moveLeftOn=0;  
         end
 %         moveforward(droneobj,'WaitUntilDone',true,'Distance',0.3);
         %% 파랑생이 꽉 안찼을 때 안정적으로 중심을 찾기 위해
@@ -1030,6 +1099,6 @@ while(Center_restart == 1)
 
     end
 
-    %imshow(bw);
+    imshow(bw);
 
 end
