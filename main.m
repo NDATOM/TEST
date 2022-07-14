@@ -1,4 +1,3 @@
-
 clear all;
 close;
 droneobj = ryze()
@@ -66,10 +65,10 @@ while(stage == 1)
     image1B = image(:,:,3);
 
     image_only_R=image1R-image1G/2-image1B/2;
-    bw = image_only_R > 55;
+    bw = image_only_R >55;
     
     image_only_B=image1B-image1R/2-image1G/2;
-    bw2 = image_only_B > 55;
+    bw2 = image_only_B >63;
     [row2, col2] = find(bw2);
     
     bw_RB=bw2 | bw;
@@ -92,15 +91,15 @@ while(stage == 1)
 
     if (length(row2) < 50 ||  length(col2) < 50) %파랑이 없고
         stage=2;
-        moveforward(droneobj,'WaitUntilDone',true,'distance',0.7);
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
         disp('if (length(row) < 50 || length(col) < 50) stage1 end');
         stage1image=bw;
         turn(droneobj, deg2rad(90));
         pause(0.5);
-        moveforward(droneobj,'WaitUntilDone',true,'distance',0.8);
+        moveforward(droneobj,'WaitUntilDone',true,'distance',1);
         break;
     elseif length(row2) > 50 && length(row2) < 150000
-        moveforward(droneobj,1,'WaitUntilDone',true,'Speed',0.8);
+        moveforward(droneobj,1,'WaitUntilDone',true,'Speed',0.7);
         disp('movefast');
     else
         moveforward(droneobj,1,'WaitUntilDone',true,'Speed',0.5);
@@ -122,7 +121,7 @@ while(stage == 2)
     image1B = image(:,:,3);
 
     image_only_B=image1B-image1R/2-image1G/2;
-    bw = image_only_B > 55;
+    bw = image_only_B >63;
     bw_origin=bw;
 
     stats = regionprops(bw);   
@@ -151,14 +150,9 @@ while(stage == 2)
 
         goCount=0;
         while 1
-            goCount=goCount+1;
-            if goCount<2 
-                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
-            else
-                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',0.8);
-            end
+            
 
-             bw=~bw_origin; % 원형만 남게 
+            bw=~bw_origin; % 원형만 남게 
         
             bw = imerode(bw,se);
             bw = imdilate(bw,se);
@@ -187,15 +181,20 @@ while(stage == 2)
             image1B = image(:,:,3);
         
             image_only_B=image1B-image1R/2-image1G/2;
-            bw = image_only_B > 55;
+            bw = image_only_B >63;
             [row, col] = find(bw);
             if (length(row) < 50 || length(col) < 50)  %중심 찾은 경우
                 stage=3;
                 moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
-                disp('if (length(row) < 50 || length(col) < 50)');
+                disp('if (length(row) < 50 || length(col) < 50) full');
                 break;
             end
-
+            if goCount==0
+                moveforward(droneobj,1,'WaitUntilDone',true,'Speed',1);
+            else 
+                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.6);
+            end
+            goCount=goCount+1;
         end
         
         break;
@@ -218,7 +217,7 @@ while(stage == 2)
             image1B = image(:,:,3);
         
             image_only_B=image1B-image1R/2-image1G/2;
-            bw = image_only_B > 55;
+            bw = image_only_B >63;
             bw_origin=bw;
             imshow(bw);
             stats = regionprops(bw);   
@@ -264,7 +263,7 @@ while(stage == 2)
             if (length(row) < 50 || length(col) < 50)  %중심 찾은 경우
                 stage=3;
                 moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
-                disp('if (length(row) < 50 || length(col) < 50)');
+                disp('if (length(row) < 50 || length(col) < 50) notfull');
                 break;
             end
             if   (length(row) > 580000 && length(col) > 580000)
@@ -274,7 +273,8 @@ while(stage == 2)
                 break;
                 
             else
-                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.8);
+                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.7);
+                goCount=goCount+1;
             end
 
         end
@@ -400,10 +400,6 @@ while(stage == 2)
 
 end
 
-
-
-
-
 %% 90도 -> 전진 -> 45도 -> 중심찾기 -> yow 조절 -> 중심찾고 전진
 
 
@@ -427,7 +423,7 @@ while(stage == 3)
     image1B = image(:,:,3);
 
     image_only_B=image1B-image1R/2-image1G/2;
-    bw = image_only_B > 55;
+    bw = image_only_B >63;
     bw_origin=bw;
 
     stats = regionprops(bw);
@@ -632,7 +628,7 @@ if correcting_yaw == 1
     image1B = image(:,:,3);
 
     image_only_B = image1B-image1R/2-image1G/2;
-    bw = image_only_B > 55;
+    bw = image_only_B >63;
     bw_origin = bw;
 
 
@@ -722,7 +718,7 @@ while(Center_restart == 1)
     image1B = image(:,:,3);
 
     image_only_B=image1B-image1R/2-image1G/2;
-    bw = image_only_B > 55;
+    bw = image_only_B >63;
     bw_origin=bw;
 
     stats = regionprops(bw);
@@ -751,14 +747,8 @@ while(Center_restart == 1)
 
         goCount=0;
         while 1
-            goCount=goCount+1;
-            if goCount<2 
-                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',1);
-                disp('gocount<2 fastfast');
-            else
-                moveforward(droneobj,0.8,'WaitUntilDone',true,'Speed',0.8);
-                disp('gocount<2 stage3');
-            end
+            
+            
 
             bw=~bw_origin; % 원형만 남게
 
@@ -789,7 +779,7 @@ while(Center_restart == 1)
             image1B = image(:,:,3);
 
             image_only_B=image1B-image1R/2-image1G/2;
-            bw = image_only_B > 55;
+            bw = image_only_B >63;
             [row, col] = find(bw);
             if (length(row) < 50 || length(col) < 50)  %중심 찾은 경우
                 stage=3;
@@ -797,23 +787,12 @@ while(Center_restart == 1)
                 disp('if (length(row) < 50 || length(col) < 50)');
                 break;
             end
-
-            % 빨강 표식 크기로 종료지점 확인 파랑이 꽉찬경우
-%             image=snapshot(cameraObj);
-%             imageHSV=rgb2hsv(image);
-%             image1H = imageHSV(:,:,1);
-%             image1S = imageHSV(:,:,2);
-%             image1V = imageHSV(:,:,3);
-%             imageR_H = image1H <= 0.06 | image1H >= 0.94;
-%             imageR_S = image1S >= 0.5 & image1S <= 1.0;
-%             imageR_V = image1V >= 0.1 & image1V <= 0.9;
-%             imageR_combi = imageR_H & imageR_S & imageR_V;
-%             imshow(imageR_combi);
-%             [rowR, colR]=find(imageR_combi);
-%             if length(rowR) > 3000 %임의의 값
-%                 disp('if length(rowR) > 3000 stage=3');
-%                 break;
-%             end
+            if goCount==0
+                moveforward(droneobj,1,'WaitUntilDone',true,'Speed',1);
+            else 
+                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.6);
+            end
+            goCount=goCount+1;
 
         end
 
@@ -841,7 +820,7 @@ while(Center_restart == 1)
             image1B = image(:,:,3);
             
             image_only_B=image1B-image1R/2-image1G/2;
-            bw = image_only_B > 55;
+            bw = image_only_B >63;
             bw_origin=bw;
             imshow(bw)
             stats = regionprops(bw);   
@@ -863,13 +842,19 @@ while(Center_restart == 1)
             [row, col] = find(bw);
             disp('length(row) = ');
             disp(length(row));
+            if (length(row) < 50 || length(col) < 50)  %중심 찾은 경우
+                stage=3;
+                moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
+                disp('if (length(row) < 50 || length(col) < 50)');
+                break;
+            end
             if   (length(row) > 590000 && length(col) > 590000)
                    %파랑이 꽉찾을 때 중심점 찾는 코드로 가기
                    fullimage=bw;
                    fullgo=1;
                    break;
             else
-                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.7);
+                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.9);
             end
 
 
