@@ -261,11 +261,18 @@ while(stage == 2)
             [row, col] = find(bw);
             disp('length(row) = ');
             disp(length(row));
+            if (length(row) < 50 || length(col) < 50)  %중심 찾은 경우
+                stage=3;
+                moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
+                disp('if (length(row) < 50 || length(col) < 50)');
+                break;
+            end
             if   (length(row) > 580000 && length(col) > 580000)
                    %파랑이 꽉찾을 때 중심점 찾는 코드로 가기
                 fullimage=bw;
                 fullgo=1;
                 break;
+                
             else
                 moveforward(droneobj,'WaitUntilDone',true,'Distance',0.8);
             end
@@ -277,65 +284,7 @@ while(stage == 2)
         disp('up');
         moveup(droneobj,'WaitUntilDone',true);
 
-% 파랑이 꽉찬다면
-    elseif   (length(row) > 580000 && length(col) > 580000) 
-        reverseOn=1;
-        bw=~bw_origin;
-        
-        bw = imerode(bw,se);
-        bw = imdilate(bw,se);
 
-        [row, col] = find(bw);
-    
-        rf=mean(row);
-        cf=mean(col);
-        %viscircles([cf rf],3);
-    
-        error_r=rf-targetcenter_full(2);
-        error_c=cf-targetcenter_full(1);
-%%
-        if abs(error_r)>margin2_full_ud  %위아래 판단, 에러가 특정 margin 밖에 있고, Col을 맞출 때
-            if error_r>0
-                disp('down full');
-               movedown(droneobj,'WaitUntilDone',true);
-            else
-                disp('up full');
-              moveup(droneobj,'WaitUntilDone',true);
-            end
-        else
-            disp('stop up down full');
-            UDIn_full=UDIn_full+1;
-        end
-%%
-        if abs(error_c)>margin2_full  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때
-            if error_c>0
-                disp('right full');
-                moveright(droneobj,'WaitUntilDone',true);
-            else
-                disp('left full');
-                moveleft(droneobj,'WaitUntilDone',true);
-            end
-        else
-            disp('stop right left full');
-            RLIn_full=RLIn_full+1;
-        end
-
-%% 파랑생이 꽉 찼을 때 안정적으로 중심을 찾기 위해
-% 양옆 혹은 위아래 하나만 중심을 찾았을 때
-        if RLIn_full~=UDIn_full
-            center_reset=1;
-        end
-        
-        if center_reset==1
-            UDIn_full=0;
-            RLIn_full=0;
-            center_reset=0;
-        end
-        
-        if RLIn_full > 2 && UDIn_full > 2 
-            fullgo=1;
-            disp('fullgo=1');
-        end
 %% 파랑이 꽉 안 찼을 때 파랑이 보이고 상하좌우 움직일 방향 결정
     elseif notfullgo==0 && fullgo==0%if reverseOn==0 
          %% 만약 이전 파랑영역보다 현재 파랑영역이 줄어들었으면 앞으로 이동 경연때도 필요한지는 모름
@@ -930,66 +879,9 @@ while(Center_restart == 1)
     elseif (length(row_origin) < 50 || length(col_origin) < 50)
         disp('up stage=3 2');
         moveup(droneobj,'WaitUntilDone',true,'Distance',0.4);
-zxs
+
         %% 파랑이 꽉찬다면
-    elseif   (length(row) > 590000 && length(col) > 590000)% || reverseOn==1
-        reverseOn=1;
-        bw=~bw_origin;
-
-        bw = imerode(bw,se);
-                bw = imdilate(bw,se);
-
-        [row, col] = find(bw);
-
-        rf=mean(row);
-        cf=mean(col);
-        viscircles([cf rf],3);
-
-        error_r=rf-targetcenter_full(2);
-        error_c=cf-targetcenter_full(1);
-        %%
-        if abs(error_r)>margin2_full_ud  %위아래 판단, 에러가 특정 margin 밖에 있고, Col을 맞출 때
-            if error_r>0
-                disp('down full');
-                movedown(droneobj,'WaitUntilDone',true);
-            else
-                disp('up full');
-                moveup(droneobj,'WaitUntilDone',true);
-            end
-        else
-            disp('stop up down full');
-            UDIn_full=UDIn_full+1;
-        end
-        %%
-        if abs(error_c)>margin2_full  %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때
-            if error_c>0
-                disp('right full');
-                moveright(droneobj,'WaitUntilDone',true);
-            else
-                disp('left full');
-                moveleft(droneobj,'WaitUntilDone',true);
-            end
-        else
-            disp('stop right left full');
-            RLIn_full=RLIn_full+1;
-        end
-
-        %% 파랑생이 꽉 찼을 때 안정적으로 중심을 찾기 위해
-        % 양옆 혹은 위아래 하나만 중심을 찾았을 때
-        if RLIn_full~=UDIn_full
-            center_reset=1;
-        end
-
-        if center_reset==1
-            UDIn_full=0;
-            RLIn_full=0;
-            center_reset=0;
-        end
-
-        if RLIn_full > 2 && UDIn_full > 2
-            fullgo=1;
-            disp('fullgo=1');
-        end
+   
         %% 파랑이 꽉 차지 않았을 때 파랑이 보이고 상하좌우 움직일 방향 결정
     elseif notfullgo==0 && fullgo==0%if reverseOn==0
         %% 만약 이전 파랑영역보다 현재 파랑영역이 줄어들었으면 앞으로 이동 경연때도 필요한지는 모름
