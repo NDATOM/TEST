@@ -91,7 +91,7 @@ while(stage == 1)
 
     if (length(row2) < 50 ||  length(col2) < 50) %파랑이 없고
         stage=2;
-        moveforward(droneobj,'WaitUntilDone',true,'distance',0.6);
+        moveforward(droneobj,'WaitUntilDone',true,'distance',0.5);
         disp('if (length(row) < 50 || length(col) < 50) stage1 end');
         stage1image=bw;
         turn(droneobj, deg2rad(90));
@@ -165,15 +165,15 @@ while(stage == 2)
    
             error_c=cf-targetcenter_full(1); 
              
-            if abs(error_c)>margin2_full %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
-                if error_c>0
-                    disp('right go convergence');
-                    moveright(droneobj,'WaitUntilDone',true,'Distance',0.2);
-                else
-                    disp('left go convergence');
-                    moveleft(droneobj,'WaitUntilDone',true,'Distance',0.2);
-                end
-            end
+%             if abs(error_c)>margin2_full %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
+%                 if error_c>0
+%                     disp('right go convergence');
+%                     moveright(droneobj,'WaitUntilDone',true,'Distance',0.2);
+%                 else
+%                     disp('left go convergence');
+%                     moveleft(droneobj,'WaitUntilDone',true,'Distance',0.2);
+%                 end
+%             end
 
             image=snapshot(cameraObj);
             image1R = image(:,:,1);
@@ -189,12 +189,8 @@ while(stage == 2)
                 disp('if (length(row) < 50 || length(col) < 50) full');
                 break;
             end
-            if goCount==0
-                moveforward(droneobj,1,'WaitUntilDone',true,'Speed',1);
-            else 
-                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.6);
-            end
-            goCount=goCount+1;
+            moveforward(droneobj,'WaitUntilDone',true,'Distance',0.5);
+            
         end
         
         break;
@@ -266,14 +262,18 @@ while(stage == 2)
                 disp('if (length(row) < 50 || length(col) < 50) notfull');
                 break;
             end
-            if   (length(row) > 580000 && length(col) > 580000)
+            if   (length(row) > 590000 && length(col) > 590000)
                    %파랑이 꽉찾을 때 중심점 찾는 코드로 가기
                 fullimage=bw;
                 fullgo=1;
                 break;
                 
             else
-                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.7);
+                if goCount==0
+                    moveforward(droneobj,1,'WaitUntilDone',true,'Speed',1);
+                else 
+                    moveforward(droneobj,'WaitUntilDone',true,'Distance',0.5);
+                end
                 goCount=goCount+1;
             end
 
@@ -446,7 +446,7 @@ while(stage == 3)
     [row, col] = find(bw);
 
     %%파랑이 꽉찼을 경우
-    if (length(row) > 590000 && length(col) > 590000)
+    if (length(row) > 600000 && length(col) > 600000)
          reverseOn=1;
          bw=~bw_origin;
 
@@ -763,15 +763,15 @@ while(Center_restart == 1)
 
             error_c=cf-targetcenter_full(1);
 
-            if abs(error_c)>margin2_full %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
-                if error_c>0
-                    disp('right go');
-                    moveright(droneobj,'WaitUntilDone',true,'Distance',0.2);
-                else
-                    disp('left go');
-                    moveleft(droneobj,'WaitUntilDone',true,'Distance',0.2);
-                end
-            end
+%             if abs(error_c)>margin2_full %양옆 판단, 에러가 특정 margin 밖에 있고 row가 맞춰지지 않았을 때 좀더 널널하게 판단
+%                 if error_c>0
+%                     disp('right go');
+%                     moveright(droneobj,'WaitUntilDone',true,'Distance',0.2);
+%                 else
+%                     disp('left go');
+%                     moveleft(droneobj,'WaitUntilDone',true,'Distance',0.2);
+%                 end
+%             end
 
             image=snapshot(cameraObj);
             image1R = image(:,:,1);
@@ -787,12 +787,8 @@ while(Center_restart == 1)
                 disp('if (length(row) < 50 || length(col) < 50)');
                 break;
             end
-            if goCount==0
-                moveforward(droneobj,1,'WaitUntilDone',true,'Speed',1);
-            else 
-                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.6);
-            end
-            goCount=goCount+1;
+            moveforward(droneobj,'WaitUntilDone',true,'Distance',0.5);
+            
 
         end
 
@@ -854,11 +850,13 @@ while(Center_restart == 1)
                    fullgo=1;
                    break;
             else
-                moveforward(droneobj,'WaitUntilDone',true,'Distance',0.9);
+                if goCount==0
+                    moveforward(droneobj,1,'WaitUntilDone',true,'Speed',1);
+                else 
+                    moveforward(droneobj,'WaitUntilDone',true,'Distance',0.5);
+                end
+                goCount=goCount+1;
             end
-
-
-
         end
         %% 파랑이 존재하지 않는다면 올라가자  안보일 때 올라가도 파랑이 안보이는 경우는 생기지 않음(아직까진)
     elseif (length(row_origin) < 50 || length(col_origin) < 50)
